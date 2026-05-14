@@ -45,11 +45,11 @@ function Dashboard() {
   const loans = data?.loans ?? [];
   const insurance = data?.insurance ?? [];
 
-  const totalPropertyValue = properties.reduce((s, p: any) => s + (Number(p.current_value) || 0), 0);
-  const monthlyIn = properties.reduce((s, p: any) => s + (Number(p.monthly_rent) || 0), 0);
+  const totalPropertyValue = properties.reduce((s: number, p: any) => s + (Number(p.current_value) || 0), 0);
+  const monthlyIn = properties.reduce((s: number, p: any) => s + (Number(p.monthly_rent) || 0), 0);
   const monthlyOut =
-    properties.reduce((s, p: any) => s + (Number(p.monthly_costs) || 0) + (Number(p.monthly_payment) || 0), 0) +
-    loans.reduce((s, l: any) => s + (Number(l.monthly_payment) || 0), 0);
+    properties.reduce((s: number, p: any) => s + (Number(p.monthly_costs) || 0) + (Number(p.monthly_payment) || 0), 0) +
+    loans.reduce((s: number, l: any) => s + (Number(l.monthly_payment) || 0), 0);
   const netCashFlow = monthlyIn - monthlyOut;
 
   // Upcoming payments (next 30d): insurance.next_due_date + property.fixed_rate_end + loan.reprice_date
