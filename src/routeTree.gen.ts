@@ -9,8 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SavingsRouteImport } from './routes/savings'
+import { Route as PropertyRouteImport } from './routes/property'
+import { Route as LoansRouteImport } from './routes/loans'
+import { Route as InvestmentsRouteImport } from './routes/investments'
+import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as InsuranceRouteImport } from './routes/insurance'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavingsRoute = SavingsRouteImport.update({
+  id: '/savings',
+  path: '/savings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertyRoute = PropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoansRoute = LoansRouteImport.update({
+  id: '/loans',
+  path: '/loans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestmentsRoute = InvestmentsRouteImport.update({
+  id: '/investments',
+  path: '/investments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsuranceRoute = InsuranceRouteImport.update({
+  id: '/insurance',
+  path: '/insurance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +67,144 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
+  '/insurance': typeof InsuranceRoute
+  '/inventory': typeof InventoryRoute
+  '/investments': typeof InvestmentsRoute
+  '/loans': typeof LoansRoute
+  '/property': typeof PropertyRoute
+  '/savings': typeof SavingsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
+  '/insurance': typeof InsuranceRoute
+  '/inventory': typeof InventoryRoute
+  '/investments': typeof InvestmentsRoute
+  '/loans': typeof LoansRoute
+  '/property': typeof PropertyRoute
+  '/savings': typeof SavingsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
+  '/insurance': typeof InsuranceRoute
+  '/inventory': typeof InventoryRoute
+  '/investments': typeof InvestmentsRoute
+  '/loans': typeof LoansRoute
+  '/property': typeof PropertyRoute
+  '/savings': typeof SavingsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/insurance'
+    | '/inventory'
+    | '/investments'
+    | '/loans'
+    | '/property'
+    | '/savings'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/health'
+    | '/insurance'
+    | '/inventory'
+    | '/investments'
+    | '/loans'
+    | '/property'
+    | '/savings'
+    | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/health'
+    | '/insurance'
+    | '/inventory'
+    | '/investments'
+    | '/loans'
+    | '/property'
+    | '/savings'
+    | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HealthRoute: typeof HealthRoute
+  InsuranceRoute: typeof InsuranceRoute
+  InventoryRoute: typeof InventoryRoute
+  InvestmentsRoute: typeof InvestmentsRoute
+  LoansRoute: typeof LoansRoute
+  PropertyRoute: typeof PropertyRoute
+  SavingsRoute: typeof SavingsRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/savings': {
+      id: '/savings'
+      path: '/savings'
+      fullPath: '/savings'
+      preLoaderRoute: typeof SavingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/property': {
+      id: '/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof PropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loans': {
+      id: '/loans'
+      path: '/loans'
+      fullPath: '/loans'
+      preLoaderRoute: typeof LoansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investments': {
+      id: '/investments'
+      path: '/investments'
+      fullPath: '/investments'
+      preLoaderRoute: typeof InvestmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insurance': {
+      id: '/insurance'
+      path: '/insurance'
+      fullPath: '/insurance'
+      preLoaderRoute: typeof InsuranceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +217,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HealthRoute: HealthRoute,
+  InsuranceRoute: InsuranceRoute,
+  InventoryRoute: InventoryRoute,
+  InvestmentsRoute: InvestmentsRoute,
+  LoansRoute: LoansRoute,
+  PropertyRoute: PropertyRoute,
+  SavingsRoute: SavingsRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
