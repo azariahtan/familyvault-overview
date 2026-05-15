@@ -44,6 +44,14 @@
   --color-aza: var(--aza);
   --color-leslie: var(--leslie);
   --color-chay: var(--chay);
+
+  /* Card tints + borders for status backgrounds */
+  --color-urgent-tint: var(--urgent-tint);
+  --color-urgent-border: var(--urgent-border);
+  --color-review-tint: var(--review-tint);
+  --color-review-border: var(--review-border);
+  --color-settled-tint: var(--settled-tint);
+  --color-settled-border: var(--settled-border);
 }
 
 :root {
