@@ -90,6 +90,14 @@
   --settled-foreground: oklch(0.99 0 0);
   --settled-soft: oklch(0.95 0.05 155);
 
+  /* Card tints — very light backgrounds when card has a status */
+  --urgent-tint: #fff0ee;
+  --urgent-border: #f5c2bd;
+  --review-tint: #fffbf0;
+  --review-border: #f0e0b0;
+  --settled-tint: #f0fff4;
+  --settled-border: #b9e6c4;
+
   /* Members */
   --aza: oklch(0.72 0.13 80);     /* gold */
   --leslie: oklch(0.62 0.10 195); /* teal */
