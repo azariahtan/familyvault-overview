@@ -37,8 +37,8 @@ function LoansPage() {
       <MemberFilterBar />
       <div className="space-y-3">
         {sortByStatus(loans).map((l: any) => (
+          <HashHighlight key={l.id} id={`record-${l.id}`}>
           <RecordCard
-            key={l.id}
             title={`${l.bank} · ${l.purpose ?? ""}`}
             subtitle={l.rate_label || (l.rate ? `${l.rate}%` : "")}
             memberId={l.member_id}
@@ -60,6 +60,7 @@ function LoansPage() {
               <FieldRow label="Reprice date" value={fmtDate(l.reprice_date)} />
             </Section>
           </RecordCard>
+          </HashHighlight>
         ))}
       </div>
       <AddRecordFab configKey="loans" />
