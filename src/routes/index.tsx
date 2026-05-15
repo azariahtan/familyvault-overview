@@ -103,7 +103,7 @@ function Dashboard() {
       {/* Upcoming payments */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold tracking-tight">Upcoming · next 30 days</h2>
+          <h2 className="text-sm font-bold tracking-tight">Due in the Next 30 Days</h2>
           <span className="text-xs text-muted-foreground">{upcoming.length} item{upcoming.length === 1 ? "" : "s"}</span>
         </div>
         {upcoming.length === 0 ? (
