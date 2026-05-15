@@ -8,6 +8,7 @@ import { RecordCard, FieldRow, Section } from "@/components/RecordCard";
 import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
 import { fmtMoney, fmtDate } from "@/lib/format";
+import { HashHighlight } from "@/components/HashHighlight";
 
 export const Route = createFileRoute("/insurance")({
   component: InsurancePage,
