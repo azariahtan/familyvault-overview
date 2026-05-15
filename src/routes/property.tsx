@@ -8,6 +8,7 @@ import { RecordCard, FieldRow, Section } from "@/components/RecordCard";
 import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
 import { fmtMoney, fmtDate, fmtPct } from "@/lib/format";
+import { HashHighlight } from "@/components/HashHighlight";
 
 export const Route = createFileRoute("/property")({
   component: PropertyPage,
@@ -40,8 +41,8 @@ function PropertyPage() {
 
       <div className="space-y-3">
         {sortByStatus(investments).map((p: any) => (
+          <HashHighlight key={p.id} id={`record-${p.id}`}>
           <RecordCard
-            key={p.id}
             title={p.name}
             subtitle={`${labelPurpose(p.purpose)} · ${p.currency}`}
             memberId={p.member_id}
@@ -76,6 +77,7 @@ function PropertyPage() {
               />
             </Section>
           </RecordCard>
+          </HashHighlight>
         ))}
       </div>
 

@@ -8,6 +8,7 @@ import { RecordCard, FieldRow, Section } from "@/components/RecordCard";
 import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
 import { fmtMoney, fmtDate } from "@/lib/format";
+import { HashHighlight } from "@/components/HashHighlight";
 
 export const Route = createFileRoute("/insurance")({
   component: InsurancePage,
@@ -58,8 +59,8 @@ function InsurancePage() {
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{cat}</h2>
           <div className="space-y-3">
             {sortByStatus(items.filter((i: any) => i.category === cat)).map((p: any) => (
+              <HashHighlight key={p.id} id={`record-${p.id}`}>
               <RecordCard
-                key={p.id}
                 title={p.name}
                 subtitle={p.provider}
                 memberId={p.member_id}
@@ -77,6 +78,7 @@ function InsurancePage() {
                   <FieldRow label="Next due" value={fmtDate(p.next_due_date)} />
                 </Section>
               </RecordCard>
+              </HashHighlight>
             ))}
           </div>
         </section>
