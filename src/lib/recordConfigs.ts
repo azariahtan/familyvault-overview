@@ -127,4 +127,12 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "details", label: "Details", type: "textarea" },
     ],
   },
+  gobag_items: {
+    table: "gobag_items",
+    queryKey: "gobag",
+    label: "Go-Bag Item",
+    fields: [
+      { key: "label", label: "Item", type: "text", required: true, placeholder: "e.g. Passports" },
+    ],
+  },
 };
