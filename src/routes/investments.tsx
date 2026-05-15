@@ -52,8 +52,8 @@ function InvestmentsPage() {
                 {sortByStatus(items.filter((i: any) => i.group_name === g)).map((inv: any) => {
                   const gain = (inv.current_value || 0) - (inv.cost_basis || 0);
                   return (
+                    <HashHighlight key={inv.id} id={`record-${inv.id}`}>
                     <RecordCard
-                      key={inv.id}
                       title={inv.name}
                       memberId={inv.member_id}
                       status={inv.status}
@@ -73,6 +73,7 @@ function InvestmentsPage() {
                         <FieldRow label="Projected return" value={fmtPct(inv.projected_return_pct)} />
                       </Section>
                     </RecordCard>
+                    </HashHighlight>
                   );
                 })}
               </div>
