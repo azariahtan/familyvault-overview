@@ -93,7 +93,7 @@ function Dashboard() {
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Property Value" value={fmtMoney(totalPropertyValue)} />
-        <Kpi label="Net Monthly CF" value={fmtMoney(netCashFlow)} accent={netCashFlow >= 0 ? "good" : "bad"} />
+        <Kpi label="Net Monthly Cash Flow" value={fmtMoney(netCashFlow)} accent={netCashFlow >= 0 ? "good" : "bad"} />
         <Kpi label="Insurance Policies" value={String(insurance.length)} />
         <Kpi label="Active Alerts" value={String(urgent.length)} accent={urgent.length > 0 ? "bad" : "neutral"} />
       </div>
