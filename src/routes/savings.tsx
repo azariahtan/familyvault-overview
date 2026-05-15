@@ -1,3 +1,4 @@
+import { AddRecordFab } from "@/components/AddRecordFab";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +68,8 @@ function SavingsPage() {
           </div>
         </section>
       ))}
+      <AddRecordFab configKey="savings_accounts" />
+
     </div>
   );
 }

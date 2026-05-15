@@ -93,7 +93,7 @@ function Dashboard() {
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Property Value" value={fmtMoney(totalPropertyValue)} />
-        <Kpi label="Net Monthly CF" value={fmtMoney(netCashFlow)} accent={netCashFlow >= 0 ? "good" : "bad"} />
+        <Kpi label="Net Monthly Cash Flow" value={fmtMoney(netCashFlow)} accent={netCashFlow >= 0 ? "good" : "bad"} />
         <Kpi label="Insurance Policies" value={String(insurance.length)} />
         <Kpi label="Active Alerts" value={String(urgent.length)} accent={urgent.length > 0 ? "bad" : "neutral"} />
       </div>
@@ -103,7 +103,7 @@ function Dashboard() {
       {/* Upcoming payments */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold tracking-tight">Upcoming · next 30 days</h2>
+          <h2 className="text-sm font-bold tracking-tight">Due in the Next 30 Days</h2>
           <span className="text-xs text-muted-foreground">{upcoming.length} item{upcoming.length === 1 ? "" : "s"}</span>
         </div>
         {upcoming.length === 0 ? (

@@ -44,6 +44,14 @@
   --color-aza: var(--aza);
   --color-leslie: var(--leslie);
   --color-chay: var(--chay);
+
+  /* Card tints + borders for status backgrounds */
+  --color-urgent-tint: var(--urgent-tint);
+  --color-urgent-border: var(--urgent-border);
+  --color-review-tint: var(--review-tint);
+  --color-review-border: var(--review-border);
+  --color-settled-tint: var(--settled-tint);
+  --color-settled-border: var(--settled-border);
 }
 
 :root {
@@ -81,6 +89,14 @@
   --settled: oklch(0.62 0.13 155);
   --settled-foreground: oklch(0.99 0 0);
   --settled-soft: oklch(0.95 0.05 155);
+
+  /* Card tints — very light backgrounds when card has a status */
+  --urgent-tint: #fff0ee;
+  --urgent-border: #f5c2bd;
+  --review-tint: #fffbf0;
+  --review-border: #f0e0b0;
+  --settled-tint: #f0fff4;
+  --settled-border: #b9e6c4;
 
   /* Members */
   --aza: oklch(0.72 0.13 80);     /* gold */

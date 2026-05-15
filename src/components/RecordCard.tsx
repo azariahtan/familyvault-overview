@@ -12,11 +12,17 @@ type Props = {
   onStatusChange: (s: Status) => void;
   action?: string | null;
   rightMeta?: ReactNode;
-  children?: ReactNode; // expanded body
+  children?: ReactNode;
   onEdit?: () => void;
   onDelete?: () => void;
   defaultOpen?: boolean;
   highlight?: boolean;
+};
+
+const tintBg: Record<Status, string> = {
+  urgent: "bg-urgent-tint border-urgent-border",
+  review: "bg-review-tint border-review-border",
+  settled: "bg-settled-tint border-settled-border",
 };
 
 export function RecordCard({
@@ -37,16 +43,42 @@ export function RecordCard({
   return (
     <article
       className={cn(
-        "group rounded-2xl border bg-card shadow-sm transition",
-        status === "urgent" && "border-urgent/50 ring-1 ring-urgent/20",
-        status === "review" && "border-review/40",
-        status === "settled" && "border-border opacity-90",
+        "group relative rounded-2xl border shadow-sm transition",
+        tintBg[status],
         highlight && "ring-2 ring-primary",
       )}
     >
+      {/* Top-right corner action icons */}
+      <div className="absolute right-2 top-2 z-10 flex gap-0.5">
+        {onEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="rounded-md p-1 text-muted-foreground hover:bg-background/60 hover:text-foreground"
+            aria-label="Edit"
+          >
+            <Pencil className="h-[18px] w-[18px]" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm("Delete this record?")) onDelete();
+            }}
+            className="rounded-md p-1 text-urgent hover:bg-urgent/10"
+            aria-label="Delete"
+          >
+            <Trash2 className="h-[18px] w-[18px]" />
+          </button>
+        )}
+      </div>
+
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-3 p-4 text-left"
+        className="flex w-full items-start gap-3 p-4 pr-20 text-left"
       >
         <div className="flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +92,7 @@ export function RecordCard({
             </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-2 pt-7">
           {rightMeta}
           <ChevronDown
             className={cn("h-4 w-4 text-muted-foreground transition", open && "rotate-180")}
@@ -68,38 +100,12 @@ export function RecordCard({
         </div>
       </button>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2">
+      <div className="flex items-center justify-between gap-2 border-t border-border/40 px-4 py-2">
         <StatusToggle value={status} onChange={onStatusChange} />
-        <div className="flex gap-1">
-          {onEdit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-              aria-label="Edit"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm("Delete this record?")) onDelete();
-              }}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-urgent/10 hover:text-urgent"
-              aria-label="Delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
       </div>
 
       {open && children && (
-        <div className="space-y-4 border-t border-border bg-muted/30 p-4">{children}</div>
+        <div className="space-y-4 border-t border-border/40 bg-background/40 p-4">{children}</div>
       )}
     </article>
   );
@@ -107,7 +113,7 @@ export function RecordCard({
 
 export function FieldRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm last:border-b-0">
+    <div className="flex items-baseline justify-between gap-3 border-b border-border/40 py-1.5 text-sm last:border-b-0">
       <span className="text-muted-foreground">{label}</span>
       <span className="text-right font-medium">{value ?? "—"}</span>
     </div>
