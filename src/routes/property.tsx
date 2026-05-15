@@ -41,8 +41,8 @@ function PropertyPage() {
 
       <div className="space-y-3">
         {sortByStatus(investments).map((p: any) => (
+          <HashHighlight key={p.id} id={`record-${p.id}`}>
           <RecordCard
-            key={p.id}
             title={p.name}
             subtitle={`${labelPurpose(p.purpose)} · ${p.currency}`}
             memberId={p.member_id}
@@ -77,6 +77,7 @@ function PropertyPage() {
               />
             </Section>
           </RecordCard>
+          </HashHighlight>
         ))}
       </div>
 
