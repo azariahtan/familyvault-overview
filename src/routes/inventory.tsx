@@ -63,6 +63,7 @@ function InventoryPage() {
           ))}
         </div>
       </section>
+      <AddRecordFab configKey="gobag_items" />
     </div>
   );
 }
