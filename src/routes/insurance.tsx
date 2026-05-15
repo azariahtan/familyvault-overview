@@ -81,6 +81,8 @@ function InsurancePage() {
           </div>
         </section>
       ))}
+      <AddRecordFab configKey="insurance_policies" />
+
     </div>
   );
 }

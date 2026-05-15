@@ -82,6 +82,8 @@ function HealthPage() {
           </section>
         );
       })}
+      <AddRecordFab configKey="health_conditions" />
+
     </div>
   );
 }

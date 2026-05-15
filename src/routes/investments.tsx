@@ -84,6 +84,8 @@ function InvestmentsPage() {
           </div>
         </>
       )}
+      <AddRecordFab configKey="investments" />
+
     </div>
   );
 }

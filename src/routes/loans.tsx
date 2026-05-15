@@ -61,6 +61,8 @@ function LoansPage() {
           </RecordCard>
         ))}
       </div>
+      <AddRecordFab configKey="loans" />
+
     </div>
   );
 }

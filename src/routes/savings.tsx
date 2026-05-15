@@ -68,6 +68,8 @@ function SavingsPage() {
           </div>
         </section>
       ))}
+      <AddRecordFab configKey="savings_accounts" />
+
     </div>
   );
 }
