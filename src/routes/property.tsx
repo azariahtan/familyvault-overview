@@ -97,6 +97,7 @@ function PropertyPage() {
           </div>
         </details>
       )}
+      <AddRecordFab configKey="properties" />
     </div>
   );
 }
