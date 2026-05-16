@@ -74,6 +74,7 @@ export type Database = {
           is_demo: boolean
           member_id: string
           name: string
+          notes: string | null
           status: Database["public"]["Enums"]["record_status"]
           supplements: Json
           updated_at: string
@@ -86,6 +87,7 @@ export type Database = {
           is_demo?: boolean
           member_id: string
           name: string
+          notes?: string | null
           status?: Database["public"]["Enums"]["record_status"]
           supplements?: Json
           updated_at?: string
@@ -98,6 +100,7 @@ export type Database = {
           is_demo?: boolean
           member_id?: string
           name?: string
+          notes?: string | null
           status?: Database["public"]["Enums"]["record_status"]
           supplements?: Json
           updated_at?: string

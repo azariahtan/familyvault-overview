@@ -8,6 +8,10 @@ import { MemberFilterBar } from "@/components/MemberFilterBar";
 import { RecordCard, Section } from "@/components/RecordCard";
 import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { NotesEditor } from "@/components/loan/NotesEditor";
+import { DocumentsList } from "@/components/loan/DocumentsList";
+import { FileText, Paperclip } from "lucide-react";
 
 export const Route = createFileRoute("/health")({
   component: HealthPage,
@@ -52,6 +56,7 @@ function HealthPage() {
                   status={c.status}
                   onStatusChange={(s) => status.mutate({ id: c.id, status: s })}
                   onDelete={() => del.mutate(c.id)}
+                  defaultOpen
                 >
                   {(c.supplements?.length || 0) > 0 && (
                     <Section title="Take">
@@ -76,6 +81,12 @@ function HealthPage() {
                       <p className="text-sm text-foreground/80">{c.details}</p>
                     </Section>
                   )}
+                  <CollapsibleSection icon={<FileText className="h-4 w-4" />} title="Notes">
+                    <NotesEditor table="health_conditions" queryKey="health" id={c.id} value={c.notes} />
+                  </CollapsibleSection>
+                  <CollapsibleSection icon={<Paperclip className="h-4 w-4" />} title="Documents">
+                    <DocumentsList entityType="health" entityId={c.id} />
+                  </CollapsibleSection>
                 </RecordCard>
               ))}
             </div>
@@ -83,7 +94,6 @@ function HealthPage() {
         );
       })}
       <AddRecordFab configKey="health_conditions" />
-
     </div>
   );
 }
