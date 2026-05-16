@@ -7,8 +7,16 @@ import { MemberFilterBar } from "@/components/MemberFilterBar";
 import { RecordCard, FieldRow, Section } from "@/components/RecordCard";
 import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
-import { fmtMoney, fmtDate, fmtPct } from "@/lib/format";
+import { fmtMoney, fmtDate, fmtMonth, fmtPct } from "@/lib/format";
 import { HashHighlight } from "@/components/HashHighlight";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { NotesEditor } from "@/components/loan/NotesEditor";
+import { HistoryLog } from "@/components/loan/HistoryLog";
+import { DocumentsList } from "@/components/loan/DocumentsList";
+import { RateSchedule } from "@/components/loan/RateSchedule";
+import { ReminderButton } from "@/components/loan/ReminderButton";
+import { monthlyPayment, remainingBalance, monthsSince } from "@/lib/loanMath";
+import { useToday } from "@/lib/today";
 
 export const Route = createFileRoute("/loans")({
   component: LoansPage,
@@ -19,6 +27,7 @@ function LoansPage() {
   const memberFilter = useAppStore((s) => s.memberFilter);
   const status = useStatusMutation("loans", "loans");
   const del = useDeleteMutation("loans", "loans");
+  const { today } = useToday();
 
   const { data: loans = [] } = useQuery({
     queryKey: ["loans", memberFilter],
@@ -36,35 +45,90 @@ function LoansPage() {
       <h1 className="text-2xl font-bold tracking-tight">Loans</h1>
       <MemberFilterBar />
       <div className="space-y-3">
-        {sortByStatus(loans).map((l: any) => (
-          <HashHighlight key={l.id} id={`record-${l.id}`}>
-          <RecordCard
-            title={`${l.bank} · ${l.purpose ?? ""}`}
-            subtitle={l.rate_label || (l.rate ? `${l.rate}%` : "")}
-            memberId={l.member_id}
-            status={l.status}
-            onStatusChange={(s) => status.mutate({ id: l.id, status: s })}
-            action={l.action}
-            onDelete={() => del.mutate(l.id)}
-            rightMeta={
-              <div className="text-right text-xs">
-                <div className="font-bold">{fmtMoney(l.balance)}</div>
-                {l.monthly_payment && <div className="text-muted-foreground">{fmtMoney(l.monthly_payment)}/mo</div>}
-              </div>
-            }
-          >
-            <Section title="Loan details">
-              <FieldRow label="Balance" value={fmtMoney(l.balance)} />
-              <FieldRow label="Rate" value={l.rate_label || fmtPct(l.rate)} />
-              <FieldRow label="Monthly payment" value={fmtMoney(l.monthly_payment)} />
-              <FieldRow label="Reprice date" value={fmtDate(l.reprice_date)} />
-            </Section>
-          </RecordCard>
-          </HashHighlight>
-        ))}
+        {sortByStatus(loans).map((l: any) => {
+          const principal = Number(l.original_amount ?? l.balance ?? 0);
+          const rate = Number(l.rate ?? 0);
+          const term = Number(l.term_years ?? 0);
+          const calcPmt = principal && term ? monthlyPayment(principal, rate, term) : 0;
+          const calcBal =
+            principal && term && l.start_date
+              ? remainingBalance(principal, rate, term, monthsSince(l.start_date, today))
+              : null;
+          const actionLabel = l.reprice_date
+            ? `Reprice by ${fmtMonth(l.reprice_date)}`
+            : l.action || null;
+
+          return (
+            <HashHighlight key={l.id} id={`record-${l.id}`}>
+              <RecordCard
+                title={`${l.bank} · ${l.purpose ?? ""}`}
+                subtitle={l.rate_label || (l.rate ? `${l.rate}%` : "")}
+                memberId={l.member_id}
+                status={l.status}
+                onStatusChange={(s) => status.mutate({ id: l.id, status: s })}
+                action={actionLabel}
+                onDelete={() => del.mutate(l.id)}
+                rightMeta={
+                  <div className="text-right text-xs">
+                    <div className="font-bold">{fmtMoney(l.balance)}</div>
+                    {(l.monthly_payment || calcPmt) && (
+                      <div className="text-muted-foreground">
+                        {fmtMoney(l.monthly_payment || calcPmt)}/mo
+                      </div>
+                    )}
+                  </div>
+                }
+              >
+                <Section title="Loan details">
+                  <FieldRow label="Original amount" value={fmtMoney(l.original_amount)} />
+                  <FieldRow label="Current balance" value={fmtMoney(l.balance)} />
+                  <FieldRow label="Loan start" value={fmtDate(l.start_date)} />
+                  <FieldRow label="Term (years)" value={l.term_years ?? "—"} />
+                  <FieldRow label="Current rate" value={l.rate_label || fmtPct(l.rate)} />
+                  <FieldRow label="Reprice date" value={fmtDate(l.reprice_date)} />
+                  <FieldRow
+                    label="Est. monthly repayment"
+                    value={
+                      calcPmt ? (
+                        <span className="font-bold text-primary">{fmtMoney(calcPmt)}</span>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                  {calcBal != null && (
+                    <FieldRow
+                      label="Est. balance today"
+                      value={<span className="text-muted-foreground">{fmtMoney(calcBal)}</span>}
+                    />
+                  )}
+                </Section>
+
+                <CollapsibleSection icon={<span>📊</span>} title="Loan Rate Schedule">
+                  <RateSchedule loanId={l.id} />
+                </CollapsibleSection>
+
+                <CollapsibleSection icon={<span>📝</span>} title="Notes" defaultOpen={!!l.notes}>
+                  <NotesEditor table="loans" queryKey="loans" id={l.id} value={l.notes} />
+                </CollapsibleSection>
+
+                <CollapsibleSection icon={<span>🕐</span>} title="History">
+                  <HistoryLog entityType="loan" entityId={l.id} />
+                </CollapsibleSection>
+
+                <CollapsibleSection icon={<span>📎</span>} title="Documents">
+                  <DocumentsList entityType="loan" entityId={l.id} />
+                </CollapsibleSection>
+
+                <div className="flex justify-end pt-1">
+                  <ReminderButton entityType="loan" entityId={l.id} />
+                </div>
+              </RecordCard>
+            </HashHighlight>
+          );
+        })}
       </div>
       <AddRecordFab configKey="loans" />
-
     </div>
   );
 }

@@ -1,0 +1,104 @@
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Upload, ExternalLink, Trash2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+export function DocumentsList({ entityType, entityId }: { entityType: string; entityId: string }) {
+  const qc = useQueryClient();
+  const [label, setLabel] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ["docs", entityType, entityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("record_documents")
+        .select("*")
+        .eq("entity_type", entityType as any)
+        .eq("entity_id", entityId)
+        .order("uploaded_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = `${entityType}/${entityId}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("vault-docs").upload(path, file);
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabase.from("record_documents").insert({
+        entity_type: entityType as any,
+        entity_id: entityId,
+        path,
+        bucket: "vault-docs",
+        label: label || file.name,
+      });
+      if (insErr) throw insErr;
+      setLabel("");
+      if (fileRef.current) fileRef.current.value = "";
+      qc.invalidateQueries({ queryKey: ["docs", entityType, entityId] });
+      toast.success("Document uploaded");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function urlFor(path: string) {
+    return supabase.storage.from("vault-docs").getPublicUrl(path).data.publicUrl;
+  }
+
+  async function del(id: string, path: string) {
+    if (!confirm("Delete this document?")) return;
+    await supabase.storage.from("vault-docs").remove([path]);
+    await supabase.from("record_documents").delete().eq("id", id);
+    qc.invalidateQueries({ queryKey: ["docs", entityType, entityId] });
+  }
+
+  return (
+    <div className="space-y-2">
+      <ul className="space-y-1.5">
+        {docs.map((d: any) => (
+          <li key={d.id} className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1.5 text-sm">
+            <a href={urlFor(d.path)} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate">
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{d.label || d.path.split("/").pop()}</span>
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(d.uploaded_at), "dd MMM yyyy")}
+              </span>
+            </a>
+            <button onClick={() => del(d.id, d.path)} className="text-urgent">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </li>
+        ))}
+        {docs.length === 0 && <li className="text-xs text-muted-foreground">No documents yet.</li>}
+      </ul>
+      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-2">
+        <Input placeholder="Label (optional)" value={label} onChange={(e) => setLabel(e.target.value)} />
+        <div className="flex items-center gap-2">
+          <input ref={fileRef} type="file" onChange={onFile} className="hidden" id={`up-${entityId}`} />
+          <Button asChild size="sm" variant="outline" disabled={uploading}>
+            <label htmlFor={`up-${entityId}`} className="cursor-pointer">
+              <Upload className="mr-1 h-3.5 w-3.5" />
+              {uploading ? "Uploading…" : "Upload"}
+            </label>
+          </Button>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Sparkles className="h-3 w-3" /> Auto-read with AI (coming soon)
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

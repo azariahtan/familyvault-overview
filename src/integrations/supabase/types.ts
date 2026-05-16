@@ -369,11 +369,15 @@ export type Database = {
           is_demo: boolean
           member_id: string | null
           monthly_payment: number | null
+          notes: string | null
+          original_amount: number | null
           purpose: string | null
           rate: number | null
           rate_label: string | null
           reprice_date: string | null
+          start_date: string | null
           status: Database["public"]["Enums"]["record_status"]
+          term_years: number | null
           updated_at: string
         }
         Insert: {
@@ -385,11 +389,15 @@ export type Database = {
           is_demo?: boolean
           member_id?: string | null
           monthly_payment?: number | null
+          notes?: string | null
+          original_amount?: number | null
           purpose?: string | null
           rate?: number | null
           rate_label?: string | null
           reprice_date?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["record_status"]
+          term_years?: number | null
           updated_at?: string
         }
         Update: {
@@ -401,11 +409,15 @@ export type Database = {
           is_demo?: boolean
           member_id?: string | null
           monthly_payment?: number | null
+          notes?: string | null
+          original_amount?: number | null
           purpose?: string | null
           rate?: number | null
           rate_label?: string | null
           reprice_date?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["record_status"]
+          term_years?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -617,6 +629,45 @@ export type Database = {
           id?: string
           note?: string
           occurred_on?: string
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          created_at: string
+          done: boolean
+          entity_id: string
+          entity_type: string
+          id: string
+          note: string | null
+          remind_at: string
+          repeat: string | null
+          what: string
+          who: string | null
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          entity_id: string
+          entity_type: string
+          id?: string
+          note?: string | null
+          remind_at: string
+          repeat?: string | null
+          what: string
+          who?: string | null
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          note?: string | null
+          remind_at?: string
+          repeat?: string | null
+          what?: string
+          who?: string | null
         }
         Relationships: []
       }
