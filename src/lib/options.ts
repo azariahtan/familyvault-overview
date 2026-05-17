@@ -1,0 +1,71 @@
+// Shared dropdown options and label helpers.
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  SGD: "$", USD: "$", AUD: "$", HKD: "$", CAD: "$", NZD: "$",
+  GBP: "£", EUR: "€", JPY: "¥", CNY: "¥", MYR: "RM", THB: "฿",
+};
+
+export const CURRENCIES = [
+  "SGD","GBP","USD","EUR","AUD","HKD","JPY","CNY","MYR","THB","CAD","NZD",
+];
+
+export const BANKS = [
+  "DBS","OCBC","UOB","Standard Chartered","HSBC","Citibank",
+  "Maybank","Bank of China","CIMB","RHB","Other",
+];
+
+export const INSURANCE_FREQ = [
+  { value: "annual", label: "Annual" },
+  { value: "semi-annual", label: "Semi-Annual" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "one-off", label: "One-Off" },
+];
+
+export const FREQ_LABEL: Record<string, string> = {
+  annual: "year", "semi-annual": "half-year", quarterly: "quarter", monthly: "month", "one-off": "one-off",
+};
+
+export const PROPERTY_PURPOSE = [
+  { value: "capital_growth", label: "Capital Growth" },
+  { value: "rental_yield",   label: "Rental Yield" },
+  { value: "own_home",       label: "Own Home" },
+  // Note: "holiday_other" requires enum migration. Mapping in UI only.
+];
+
+export const PROPERTY_PURPOSE_LABEL: Record<string, string> = {
+  capital_growth: "Capital Growth",
+  rental_yield: "Rental Yield",
+  own_home: "Own Home",
+};
+
+export const INVESTMENT_TYPES = [
+  "Unit Trust / Fund",
+  "Exchange Traded Fund (ETF)",
+  "Stocks / Shares",
+  "ILP (Investment-Linked Policy)",
+  "Endowment",
+  "Bonds",
+  "REITs",
+  "Cryptocurrency",
+  "Cash / Money Market",
+  "SRS",
+  "CPF-OA Investment",
+  "Other",
+];
+
+export const INSURANCE_CATEGORIES = [
+  "Life","Health","Critical Illness","Disability","Personal Accident",
+  "Car","Home","Travel","Mortgage","Other",
+];
+
+export function capitalize(s: string | null | undefined) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+export function freqLabel(f: string | null | undefined) {
+  if (!f) return "year";
+  const key = f.toLowerCase();
+  return FREQ_LABEL[key] ?? capitalize(f);
+}
