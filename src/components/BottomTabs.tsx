@@ -1,56 +1,106 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Home,
-  Building2,
-  Shield,
-  TrendingUp,
-  Landmark,
-  PiggyBank,
-  Heart,
-  Package,
-  Settings as SettingsIcon,
+  Home, Building2, Shield, Landmark, MoreHorizontal,
+  TrendingUp, PiggyBank, Heart, Package, Settings as SettingsIcon,
+  type LucideIcon,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-const tabs = [
-  { to: "/", label: "Home", icon: Home },
-  { to: "/property", label: "Property", icon: Building2 },
+type Tab = { to: string; label: string; icon: LucideIcon };
+
+const MOBILE_PRIMARY: Tab[] = [
+  { to: "/",          label: "Home",      icon: Home },
+  { to: "/property",  label: "Property",  icon: Building2 },
   { to: "/insurance", label: "Insurance", icon: Shield },
-  { to: "/investments", label: "Invest", icon: TrendingUp },
-  { to: "/loans", label: "Loans", icon: Landmark },
-  { to: "/savings", label: "Savings", icon: PiggyBank },
-  { to: "/health", label: "Health", icon: Heart },
-  { to: "/inventory", label: "Inventory", icon: Package },
-] as const;
+  { to: "/loans",     label: "Loans",     icon: Landmark },
+];
+
+const MOBILE_MORE: Tab[] = [
+  { to: "/investments", label: "Investments", icon: TrendingUp },
+  { to: "/savings",     label: "Savings",     icon: PiggyBank },
+  { to: "/health",      label: "Health",      icon: Heart },
+  { to: "/inventory",   label: "Inventory",   icon: Package },
+  { to: "/settings",    label: "Settings",    icon: SettingsIcon },
+];
+
+const ALL_TABS: Tab[] = [...MOBILE_PRIMARY, ...MOBILE_MORE];
 
 export function BottomTabs() {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <ul className="mx-auto grid max-w-3xl grid-cols-9">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          return (
-            <li key={t.to}>
-              <Link
-                to={t.to}
-                activeOptions={{ exact: t.to === "/" }}
-                className="flex flex-col items-center gap-0.5 py-2 text-[10px] text-muted-foreground transition-colors data-[status=active]:text-primary"
+  const isMobile = useIsMobile();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  if (isMobile) {
+    return (
+      <>
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+          <ul className="grid grid-cols-5">
+            {MOBILE_PRIMARY.map((t) => <TabItem key={t.to} t={t} />)}
+            <li>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(true)}
+                className="flex w-full flex-col items-center gap-0.5 py-2.5 text-[10px] text-muted-foreground"
+                aria-label="More"
               >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{t.label}</span>
-              </Link>
+                <MoreHorizontal className="h-5 w-5" />
+                <span className="font-medium">More</span>
+              </button>
             </li>
-          );
-        })}
-        <li>
-          <Link
-            to="/settings"
-            className="flex flex-col items-center gap-0.5 py-2 text-[10px] text-muted-foreground transition-colors data-[status=active]:text-primary"
-          >
-            <SettingsIcon className="h-5 w-5" />
-            <span className="font-medium">Settings</span>
-          </Link>
-        </li>
+          </ul>
+        </nav>
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl pb-6">
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
+            <SheetHeader>
+              <SheetTitle className="text-base">More</SheetTitle>
+            </SheetHeader>
+            <ul className="mt-3 divide-y divide-border">
+              {MOBILE_MORE.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <li key={t.to}>
+                    <Link
+                      to={t.to}
+                      onClick={() => setMoreOpen(false)}
+                      className="flex items-center gap-3 px-1 py-3.5 text-sm font-medium transition hover:bg-accent/40 rounded-md"
+                    >
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{t.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
+
+  // Tablet / desktop: full bar
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur">
+      <ul className="mx-auto grid max-w-3xl grid-cols-9">
+        {ALL_TABS.map((t) => <TabItem key={t.to} t={t} />)}
       </ul>
     </nav>
+  );
+}
+
+function TabItem({ t }: { t: Tab }) {
+  const Icon = t.icon;
+  return (
+    <li>
+      <Link
+        to={t.to}
+        activeOptions={{ exact: t.to === "/" }}
+        className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] text-muted-foreground transition-colors data-[status=active]:text-primary"
+      >
+        <Icon className="h-5 w-5" />
+        <span className="font-medium">{t.label}</span>
+      </Link>
+    </li>
   );
 }

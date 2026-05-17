@@ -97,15 +97,17 @@ function InventoryPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search items…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search items…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         {q && (
-          <div className="mt-2 space-y-1 rounded-xl border border-border bg-card p-2">
+          <div className="absolute left-0 right-0 top-full z-30 mt-2 space-y-1 rounded-xl border border-border bg-card p-2 shadow-lg">
             {searchResults.length === 0 && (
               <p className="px-2 py-3 text-center text-xs text-muted-foreground">No items match "{search}"</p>
             )}
@@ -357,15 +359,21 @@ function FolderSheet({
     <Sheet open onOpenChange={(v) => !v && onClose()}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
+          <SheetTitle className="flex items-center justify-between pr-8">
             <span>{folder.name}</span>
-            <button
-              onClick={delFolder}
-              className="rounded-md p-1 text-urgent hover:bg-urgent/10"
-              aria-label="Delete location"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <details className="relative">
+              <summary className="cursor-pointer list-none rounded-md p-1 text-muted-foreground hover:bg-accent" aria-label="More options">
+                <span className="text-xl leading-none">⋯</span>
+              </summary>
+              <div className="absolute right-0 z-10 mt-1 w-44 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+                <button
+                  onClick={delFolder}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-urgent hover:bg-urgent/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete location
+                </button>
+              </div>
+            </details>
           </SheetTitle>
         </SheetHeader>
 

@@ -119,7 +119,12 @@ function Dashboard() {
         <Kpi label="Total Assets" value={fmtMoney(totalAssets)} />
         <Kpi label="Total Liabilities" value={fmtMoney(totalLiabilities)} />
         <Kpi label="Net Worth" value={fmtMoney(netWorth)} accent="gold" big />
-        <Kpi label="Active Alerts" value={String(alertCount)} accent={alertCount > 0 ? "bad" : "neutral"} />
+        <Kpi
+          label="Active Alerts"
+          value={String(alertCount)}
+          accent={alertCount > 0 ? "bad" : "neutral"}
+          sub={`${urgent.length} urgent · ${review.length} to review`}
+        />
       </div>
 
       {/* Monthly cash flow line */}
@@ -270,35 +275,28 @@ function Dashboard() {
 }
 
 function Kpi({
-  label,
-  value,
-  accent,
-  big,
+  label, value, accent, big, sub,
 }: {
   label: string;
   value: string;
   accent?: "good" | "bad" | "neutral" | "gold";
   big?: boolean;
+  sub?: string;
 }) {
   const valueColor =
-    accent === "good"
-      ? "text-settled"
-      : accent === "bad"
-      ? "text-urgent"
-      : accent === "gold"
-      ? "text-primary"
-      : "";
+    accent === "good" ? "text-settled"
+    : accent === "bad" ? "text-urgent"
+    : accent === "gold" ? "text-primary"
+    : "";
+  const borderTop =
+    accent === "bad" ? "border-t-2 border-t-urgent"
+    : accent === "gold" ? "border-primary/40"
+    : "";
   return (
-    <div className={`rounded-2xl border border-border bg-card p-3 ${accent === "gold" ? "border-primary/40" : ""}`}>
+    <div className={`rounded-2xl border border-border bg-card p-3 ${borderTop}`}>
       <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 ${big ? "text-2xl" : "text-xl"} font-bold ${valueColor}`}>
-        {value}
-        {label === "Active Alerts" && Number(value) > 0 && (
-          <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-urgent px-1.5 text-[10px] font-bold text-urgent-foreground">
-            !
-          </span>
-        )}
-      </div>
+      <div className={`mt-1 ${big ? "text-2xl" : "text-xl"} font-bold ${valueColor}`}>{value}</div>
+      {sub && <div className="mt-0.5 text-[10px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }

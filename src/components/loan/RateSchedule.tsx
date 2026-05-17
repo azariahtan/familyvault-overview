@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const TYPES = ["Fixed", "SORA+", "COF+", "Other"];
+const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => `Year ${i + 1}`);
 
 export function RateSchedule({ loanId }: { loanId: string }) {
   const qc = useQueryClient();
@@ -48,32 +49,38 @@ export function RateSchedule({ loanId }: { loanId: string }) {
 
   return (
     <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_80px_110px_28px] gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span>Year</span>
+        <span>Rate %</span>
+        <span>Type</span>
+        <span />
+      </div>
       <div className="space-y-1.5">
         {rows.map((r: any) => (
-          <div key={r.id} className="grid grid-cols-[1fr_70px_110px_28px] items-center gap-1.5 text-sm">
-            <Input
-              defaultValue={r.year_label}
-              onBlur={(e) => e.target.value !== r.year_label && update(r.id, { year_label: e.target.value })}
-              className="h-8"
-            />
+          <div key={r.id} className="grid grid-cols-[1fr_80px_110px_28px] items-center gap-1.5 text-sm">
+            <select
+              value={r.year_label}
+              onChange={(e) => update(r.id, { year_label: e.target.value })}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
             <Input
               type="number"
               step="0.01"
               defaultValue={r.rate ?? ""}
               onBlur={(e) => update(r.id, { rate: e.target.value ? Number(e.target.value) : null })}
               className="h-8"
-              placeholder="%"
+              placeholder="0.00"
             />
             <select
               value={r.rate_type ?? "Fixed"}
               onChange={(e) => update(r.id, { rate_type: e.target.value })}
               className="h-8 rounded-md border border-input bg-background px-2 text-sm"
             >
-              {TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
+              {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <button onClick={() => del(r.id)} className="text-urgent">
+            <button onClick={() => del(r.id)} className="text-urgent" aria-label="Delete row">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>

@@ -1,16 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useMembers } from "@/hooks/useMembers";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
   head: () => ({ meta: [{ title: "Settings — FamilyVault" }] }),
 });
 
+const ACCENT_PRESETS = [
+  { name: "Gold",  value: "oklch(0.72 0.13 80)" },
+  { name: "Teal",  value: "oklch(0.62 0.10 195)" },
+  { name: "Coral", value: "oklch(0.68 0.18 35)" },
+  { name: "Sage",  value: "oklch(0.65 0.10 150)" },
+  { name: "Plum",  value: "oklch(0.55 0.15 320)" },
+  { name: "Slate", value: "oklch(0.45 0.04 250)" },
+];
+
+type LSAlerts = {
+  mortgage_days: number;
+  insurance_days: number;
+  fd_days: number;
+  warranty_days: number;
+};
+const DEFAULTS: LSAlerts = { mortgage_days: 90, insurance_days: 60, fd_days: 30, warranty_days: 90 };
+
+function loadAlerts(): LSAlerts {
+  if (typeof window === "undefined") return DEFAULTS;
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("fv:alerts") ?? "{}") }; }
+  catch { return DEFAULTS; }
+}
+
 function SettingsPage() {
   const qc = useQueryClient();
+  const { data: members = [] } = useMembers();
   const { data: settings } = useQuery({
     queryKey: ["app_settings"],
     queryFn: async () => {
@@ -20,6 +45,27 @@ function SettingsPage() {
   });
   const [familyName, setFamilyName] = useState("");
   const [simDate, setSimDate] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    typeof window !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
+  );
+  const [accent, setAccent] = useState<string>(() =>
+    (typeof window !== "undefined" && localStorage.getItem("fv:accent")) || ACCENT_PRESETS[0].value
+  );
+  const [alerts, setAlerts] = useState<LSAlerts>(loadAlerts);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty("--aza", accent);
+    localStorage.setItem("fv:accent", accent);
+  }, [accent]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("fv:alerts", JSON.stringify(alerts));
+  }, [alerts]);
 
   const save = useMutation({
     mutationFn: async (patch: any) => {
@@ -32,10 +78,42 @@ function SettingsPage() {
     },
   });
 
+  async function clearDemo() {
+    if (!confirm("Are you sure? This cannot be undone.")) return;
+    const tables = ["properties", "loans", "insurance_policies", "investments", "savings_accounts", "health_conditions"];
+    for (const t of tables) {
+      await supabase.from(t as any).delete().eq("is_demo", true);
+    }
+    qc.invalidateQueries();
+    toast.success("Demo data cleared");
+  }
+
+  async function exportCsv() {
+    const tables = ["properties", "loans", "insurance_policies", "investments", "savings_accounts"];
+    let out = "";
+    for (const t of tables) {
+      const { data } = await supabase.from(t as any).select("*");
+      if (!data || data.length === 0) continue;
+      const cols = Object.keys(data[0]);
+      out += `# ${t}\n${cols.join(",")}\n`;
+      for (const row of data) {
+        out += cols.map((c) => JSON.stringify((row as any)[c] ?? "")).join(",") + "\n";
+      }
+      out += "\n";
+    }
+    const blob = new Blob([out], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `familyvault-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-6">
       <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
 
+      {/* Family */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-bold">Family</h2>
         <label className="block text-xs font-medium text-muted-foreground">Family name</label>
@@ -45,17 +123,85 @@ function SettingsPage() {
           onChange={(e) => setFamilyName(e.target.value)}
         />
         <button
-          className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           onClick={() => save.mutate({ family_name: familyName || settings?.family_name })}
         >
           Save
         </button>
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members</div>
+          <ul className="space-y-1.5">
+            {members.map((m) => (
+              <li key={m.id} className="flex items-center gap-3 rounded-lg bg-background/50 px-3 py-2 text-sm">
+                <span className="h-3 w-3 rounded-full" style={{ background: m.color }} />
+                <span className="flex-1 font-medium">{m.name}</span>
+                <span className="text-xs text-muted-foreground">{m.short_name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
+      {/* Appearance */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-3 text-sm font-bold">Appearance</h2>
+        <div className="flex items-center justify-between text-sm">
+          <span>Dark mode</span>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className={`relative h-6 w-11 rounded-full transition ${theme === "dark" ? "bg-primary" : "bg-muted"}`}
+            aria-pressed={theme === "dark"}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${theme === "dark" ? "left-5" : "left-0.5"}`} />
+          </button>
+        </div>
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Accent colour</div>
+          <div className="flex flex-wrap gap-2">
+            {ACCENT_PRESETS.map((c) => (
+              <button
+                key={c.name}
+                onClick={() => setAccent(c.value)}
+                title={c.name}
+                className={`h-8 w-8 rounded-full border-2 transition ${accent === c.value ? "border-foreground" : "border-transparent"}`}
+                style={{ background: c.value }}
+                aria-label={c.name}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Alerts & Reminders */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-3 text-sm font-bold">Alerts & Reminders</h2>
+        {[
+          { key: "mortgage_days",  label: "Mortgage repricing alert" },
+          { key: "insurance_days", label: "Insurance renewal alert" },
+          { key: "fd_days",        label: "Fixed Deposit maturity alert" },
+          { key: "warranty_days",  label: "Warranty expiry alert" },
+        ].map((r) => (
+          <div key={r.key} className="flex items-center justify-between py-1.5 text-sm">
+            <span>{r.label}</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={(alerts as any)[r.key]}
+                onChange={(e) => setAlerts({ ...alerts, [r.key]: Number(e.target.value) })}
+                className="h-7 w-16 rounded-md border border-input bg-background px-2 text-right text-sm"
+              />
+              <span className="text-xs text-muted-foreground">days before</span>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Test Mode */}
       <section className="rounded-2xl border border-review/40 bg-review-soft/30 p-4">
         <h2 className="mb-1 text-sm font-bold">Test Mode</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          Simulate today's date. The whole app behaves as if today were the date you pick — useful for testing reminders.
+          Simulate a future date (for testing alerts). The whole app behaves as if today were the date you pick.
         </p>
         <input
           type="date"
@@ -64,19 +210,35 @@ function SettingsPage() {
           onChange={(e) => setSimDate(e.target.value)}
         />
         <div className="mt-3 flex gap-2">
-          <button
-            className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-            onClick={() => save.mutate({ simulated_date: simDate || null })}
-          >
-            Apply
+          <button className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+            onClick={() => save.mutate({ simulated_date: simDate || null })}>Apply</button>
+          <button className="rounded-lg border border-border px-3 py-2 text-xs font-semibold"
+            onClick={() => save.mutate({ simulated_date: null })}>Clear</button>
+        </div>
+      </section>
+
+      {/* Data */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-3 text-sm font-bold">Data</h2>
+        <div className="flex flex-col gap-2">
+          <button onClick={exportCsv} className="rounded-lg border border-border px-3 py-2 text-sm font-semibold">
+            Export all data as CSV
           </button>
-          <button
-            className="rounded-lg border border-border px-3 py-2 text-xs font-semibold"
-            onClick={() => save.mutate({ simulated_date: null })}
-          >
-            Clear
+          <button onClick={clearDemo} className="rounded-lg border border-urgent/40 px-3 py-2 text-sm font-semibold text-urgent">
+            Clear all demo data
           </button>
         </div>
+      </section>
+
+      {/* About */}
+      <section className="rounded-2xl border border-border bg-card p-4 text-sm">
+        <h2 className="mb-2 text-sm font-bold">About</h2>
+        <p className="font-semibold">FamilyVault</p>
+        <p className="text-muted-foreground">Your one stop for everything family — all in one place.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Version 1.0.0</p>
+        <p className="mt-2 text-xs italic text-muted-foreground">
+          Built for families who want one place to track everything that matters.
+        </p>
       </section>
     </div>
   );
