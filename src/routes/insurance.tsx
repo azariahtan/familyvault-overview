@@ -9,6 +9,11 @@ import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
 import { fmtMoney, fmtDate } from "@/lib/format";
 import { HashHighlight } from "@/components/HashHighlight";
+import { useEditRecord } from "@/components/EditRecordButton";
+import { freqLabel } from "@/lib/options";
+import { DocumentsList } from "@/components/loan/DocumentsList";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { FileText } from "lucide-react";
 
 export const Route = createFileRoute("/insurance")({
   component: InsurancePage,
@@ -44,7 +49,7 @@ function InsurancePage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold tracking-tight">Insurance</h1>
       <p className="text-xs text-muted-foreground">
-        {items.length} policies · {fmtMoney(totalAnnual)}/year total
+        {items.length} policies · {fmtMoney(totalAnnual)} / year total
       </p>
       <MemberFilterBar />
 
@@ -59,32 +64,56 @@ function InsurancePage() {
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{cat}</h2>
           <div className="space-y-3">
             {sortByStatus(items.filter((i: any) => i.category === cat)).map((p: any) => (
-              <HashHighlight key={p.id} id={`record-${p.id}`}>
-              <RecordCard
-                title={p.name}
-                subtitle={p.provider}
-                memberId={p.member_id}
-                status={p.status}
-                onStatusChange={(s) => status.mutate({ id: p.id, status: s })}
-                action={p.action}
+              <InsuranceRow
+                key={p.id}
+                p={p}
+                onStatus={(s) => status.mutate({ id: p.id, status: s })}
                 onDelete={() => del.mutate(p.id)}
-                rightMeta={<div className="text-xs font-bold">{fmtMoney(p.premium)}/{p.frequency || "yr"}</div>}
-              >
-                <Section title="Policy">
-                  <FieldRow label="Policy #" value={p.policy_number} />
-                  <FieldRow label="Sum assured" value={fmtMoney(p.sum_assured)} />
-                  <FieldRow label="Start" value={fmtDate(p.start_date)} />
-                  <FieldRow label="End" value={fmtDate(p.end_date)} />
-                  <FieldRow label="Next due" value={fmtDate(p.next_due_date)} />
-                </Section>
-              </RecordCard>
-              </HashHighlight>
+              />
             ))}
           </div>
         </section>
       ))}
       <AddRecordFab configKey="insurance_policies" />
-
     </div>
+  );
+}
+
+function InsuranceRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => void; onDelete: () => void }) {
+  const edit = useEditRecord("insurance_policies", p);
+  return (
+    <HashHighlight id={`record-${p.id}`}>
+      <RecordCard
+        title={p.name}
+        subtitle={p.provider}
+        memberId={p.member_id}
+        status={p.status}
+        onStatusChange={onStatus}
+        action={p.action}
+        onEdit={edit.open}
+        onDelete={onDelete}
+        rightMeta={
+          <div className="text-right text-xs">
+            <div className="font-bold">{fmtMoney(p.premium)}</div>
+            <div className="text-muted-foreground">/ {freqLabel(p.frequency)}</div>
+          </div>
+        }
+      >
+        <Section title="Policy">
+          <FieldRow label="Policy #" value={p.policy_number} />
+          <FieldRow label="Sum assured" value={fmtMoney(p.sum_assured)} />
+          <FieldRow label="Start" value={fmtDate(p.start_date)} />
+          <FieldRow label="End" value={fmtDate(p.end_date)} />
+          <FieldRow label="Next due" value={fmtDate(p.next_due_date)} />
+        </Section>
+        <CollapsibleSection icon={<FileText className="h-4 w-4" />} title="Documents">
+          <DocumentsList entityType="insurance" entityId={p.id} />
+          <p className="mt-2 text-[11px] italic text-muted-foreground">
+            AI document reading coming soon — it will auto-fill your policy details.
+          </p>
+        </CollapsibleSection>
+      </RecordCard>
+      {edit.element}
+    </HashHighlight>
   );
 }

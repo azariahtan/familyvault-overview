@@ -12,6 +12,7 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { NotesEditor } from "@/components/loan/NotesEditor";
 import { DocumentsList } from "@/components/loan/DocumentsList";
 import { FileText, Paperclip } from "lucide-react";
+import { useEditRecord } from "@/components/EditRecordButton";
 
 export const Route = createFileRoute("/health")({
   component: HealthPage,
@@ -49,45 +50,12 @@ function HealthPage() {
             </h2>
             <div className="space-y-3">
               {sortByStatus(conditions).map((c: any) => (
-                <RecordCard
+                <HealthRow
                   key={c.id}
-                  title={c.name}
-                  memberId={c.member_id}
-                  status={c.status}
-                  onStatusChange={(s) => status.mutate({ id: c.id, status: s })}
+                  c={c}
+                  onStatus={(s) => status.mutate({ id: c.id, status: s })}
                   onDelete={() => del.mutate(c.id)}
-                  defaultOpen
-                >
-                  {(c.supplements?.length || 0) > 0 && (
-                    <Section title="Take">
-                      <div className="flex flex-wrap gap-1.5">
-                        {c.supplements.map((s: string) => (
-                          <span key={s} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium">{s}</span>
-                        ))}
-                      </div>
-                    </Section>
-                  )}
-                  {(c.actions?.length || 0) > 0 && (
-                    <Section title="Do">
-                      <div className="flex flex-wrap gap-1.5">
-                        {c.actions.map((s: string) => (
-                          <span key={s} className="rounded-full bg-settled-soft px-2.5 py-1 text-xs font-medium text-settled">{s}</span>
-                        ))}
-                      </div>
-                    </Section>
-                  )}
-                  {c.details && (
-                    <Section title="Details">
-                      <p className="text-sm text-foreground/80">{c.details}</p>
-                    </Section>
-                  )}
-                  <CollapsibleSection icon={<FileText className="h-4 w-4" />} title="Notes">
-                    <NotesEditor table="health_conditions" queryKey="health" id={c.id} value={c.notes} />
-                  </CollapsibleSection>
-                  <CollapsibleSection icon={<Paperclip className="h-4 w-4" />} title="Documents">
-                    <DocumentsList entityType="health" entityId={c.id} />
-                  </CollapsibleSection>
-                </RecordCard>
+                />
               ))}
             </div>
           </section>
@@ -95,5 +63,53 @@ function HealthPage() {
       })}
       <AddRecordFab configKey="health_conditions" />
     </div>
+  );
+}
+
+function HealthRow({ c, onStatus, onDelete }: { c: any; onStatus: (s: any) => void; onDelete: () => void }) {
+  const edit = useEditRecord("health_conditions", c);
+  return (
+    <>
+      <RecordCard
+        title={c.name}
+        memberId={c.member_id}
+        status={c.status}
+        onStatusChange={onStatus}
+        onEdit={edit.open}
+        onDelete={onDelete}
+        defaultOpen
+      >
+        {(c.supplements?.length || 0) > 0 && (
+          <Section title="Take">
+            <div className="flex flex-wrap gap-1.5">
+              {c.supplements.map((s: string) => (
+                <span key={s} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium">{s}</span>
+              ))}
+            </div>
+          </Section>
+        )}
+        {(c.actions?.length || 0) > 0 && (
+          <Section title="Do">
+            <div className="flex flex-wrap gap-1.5">
+              {c.actions.map((s: string) => (
+                <span key={s} className="rounded-full bg-settled-soft px-2.5 py-1 text-xs font-medium text-settled">{s}</span>
+              ))}
+            </div>
+          </Section>
+        )}
+        {c.details && (
+          <Section title="Details">
+            <p className="text-sm text-foreground/80">{c.details}</p>
+          </Section>
+        )}
+        <CollapsibleSection icon={<FileText className="h-4 w-4" />} title="Notes">
+          <NotesEditor table="health_conditions" queryKey="health" id={c.id} value={c.notes} />
+        </CollapsibleSection>
+        <CollapsibleSection icon={<Paperclip className="h-4 w-4" />} title="Documents">
+          <DocumentsList entityType="health" entityId={c.id} />
+        </CollapsibleSection>
+      </RecordCard>
+      {edit.element}
+    </>
   );
 }

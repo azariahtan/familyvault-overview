@@ -9,6 +9,8 @@ import { useStatusMutation, useDeleteMutation } from "@/lib/mutations";
 import { sortByStatus } from "@/lib/sort";
 import { fmtMoney, fmtDate, fmtPct } from "@/lib/format";
 import { HashHighlight } from "@/components/HashHighlight";
+import { useEditRecord } from "@/components/EditRecordButton";
+import { PROPERTY_PURPOSE_LABEL } from "@/lib/options";
 
 export const Route = createFileRoute("/property")({
   component: PropertyPage,
@@ -41,43 +43,12 @@ function PropertyPage() {
 
       <div className="space-y-3">
         {sortByStatus(investments).map((p: any) => (
-          <HashHighlight key={p.id} id={`record-${p.id}`}>
-          <RecordCard
-            title={p.name}
-            subtitle={`${labelPurpose(p.purpose)} · ${p.currency}`}
-            memberId={p.member_id}
-            status={p.status}
-            onStatusChange={(s) => status.mutate({ id: p.id, status: s })}
-            action={p.strategy}
+          <PropertyRow
+            key={p.id}
+            p={p}
+            onStatus={(s) => status.mutate({ id: p.id, status: s })}
             onDelete={() => del.mutate(p.id)}
-            rightMeta={
-              <div className="text-right text-xs">
-                <div className="font-bold">{fmtMoney(p.current_value, p.currency)}</div>
-                {p.monthly_rent && <div className="text-muted-foreground">{fmtMoney(p.monthly_rent, p.currency)}/mo</div>}
-              </div>
-            }
-          >
-            <Section title="Financials">
-              <FieldRow label="Purchase price" value={fmtMoney(p.purchase_price, p.currency)} />
-              <FieldRow label="Current value" value={fmtMoney(p.current_value, p.currency)} />
-              <FieldRow label="Capital gain" value={fmtMoney((p.current_value || 0) - (p.purchase_price || 0), p.currency)} />
-              <FieldRow label="Mortgage" value={p.mortgage_bank ? `${p.mortgage_bank} · ${fmtMoney(p.mortgage_balance, p.currency)}` : "—"} />
-              <FieldRow label="Monthly payment" value={fmtMoney(p.monthly_payment, p.currency)} />
-              <FieldRow label="Interest rate" value={fmtPct(p.interest_rate)} />
-              <FieldRow label="Fixed rate ends" value={fmtDate(p.fixed_rate_end)} />
-              <FieldRow label="Monthly rent" value={fmtMoney(p.monthly_rent, p.currency)} />
-              <FieldRow label="Monthly costs" value={fmtMoney(p.monthly_costs, p.currency)} />
-              <FieldRow
-                label="Loan vs Value %"
-                value={p.current_value && p.mortgage_balance ? fmtPct((p.mortgage_balance / p.current_value) * 100) : "—"}
-              />
-              <FieldRow
-                label="Gross yield %"
-                value={p.current_value && p.monthly_rent ? fmtPct(((p.monthly_rent * 12) / p.current_value) * 100) : "—"}
-              />
-            </Section>
-          </RecordCard>
-          </HashHighlight>
+          />
         ))}
       </div>
 
@@ -86,14 +57,11 @@ function PropertyPage() {
           <summary className="cursor-pointer text-sm font-bold">My Homes ▾</summary>
           <div className="mt-3 space-y-3">
             {homes.map((p: any) => (
-              <RecordCard
+              <PropertyRow
                 key={p.id}
-                title={p.name}
-                subtitle="Own home"
-                memberId={p.member_id}
-                status={p.status}
-                onStatusChange={(s) => status.mutate({ id: p.id, status: s })}
-                action={p.strategy}
+                p={p}
+                onStatus={(s) => status.mutate({ id: p.id, status: s })}
+                onDelete={() => del.mutate(p.id)}
               />
             ))}
           </div>
@@ -104,11 +72,47 @@ function PropertyPage() {
   );
 }
 
-function labelPurpose(p: string) {
-  switch (p) {
-    case "capital_growth": return "Investment — Capital Growth";
-    case "rental_yield": return "Investment — Rental Yield";
-    case "own_home": return "Own Home";
-    default: return "Other";
-  }
+function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => void; onDelete: () => void }) {
+  const edit = useEditRecord("properties", p);
+  return (
+    <HashHighlight id={`record-${p.id}`}>
+      <RecordCard
+        title={p.name}
+        subtitle={`${PROPERTY_PURPOSE_LABEL[p.purpose] ?? "Other"} · ${p.currency}`}
+        memberId={p.member_id}
+        status={p.status}
+        onStatusChange={onStatus}
+        action={p.strategy}
+        onEdit={edit.open}
+        onDelete={onDelete}
+        rightMeta={
+          <div className="text-right text-xs">
+            <div className="font-bold">{fmtMoney(p.current_value, p.currency)}</div>
+            {p.monthly_rent && <div className="text-muted-foreground">{fmtMoney(p.monthly_rent, p.currency)}/mo</div>}
+          </div>
+        }
+      >
+        <Section title="Financials">
+          <FieldRow label="Purchase price" value={fmtMoney(p.purchase_price, p.currency)} />
+          <FieldRow label="Current value" value={fmtMoney(p.current_value, p.currency)} />
+          <FieldRow label="Capital gain" value={fmtMoney((p.current_value || 0) - (p.purchase_price || 0), p.currency)} />
+          <FieldRow label="Mortgage" value={p.mortgage_bank ? `${p.mortgage_bank} · ${fmtMoney(p.mortgage_balance, p.currency)}` : "—"} />
+          <FieldRow label="Monthly payment" value={fmtMoney(p.monthly_payment, p.currency)} />
+          <FieldRow label="Interest rate" value={fmtPct(p.interest_rate)} />
+          <FieldRow label="Fixed rate ends" value={fmtDate(p.fixed_rate_end)} />
+          <FieldRow label="Monthly rent" value={fmtMoney(p.monthly_rent, p.currency)} />
+          <FieldRow label="Monthly costs" value={fmtMoney(p.monthly_costs, p.currency)} />
+          <FieldRow
+            label="Loan vs Value %"
+            value={p.current_value && p.mortgage_balance ? fmtPct((p.mortgage_balance / p.current_value) * 100) : "—"}
+          />
+          <FieldRow
+            label="Gross yield %"
+            value={p.current_value && p.monthly_rent ? fmtPct(((p.monthly_rent * 12) / p.current_value) * 100) : "—"}
+          />
+        </Section>
+      </RecordCard>
+      {edit.element}
+    </HashHighlight>
+  );
 }
