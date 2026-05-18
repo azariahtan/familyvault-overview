@@ -20,6 +20,7 @@ export function MemberFilterBar({ className }: { className?: string }) {
           color={m.color}
           onClick={() => setMemberFilter(m.id)}
           label={m.short_name || m.name}
+          emoji={m.emoji}
         />
       ))}
     </div>
@@ -27,40 +28,38 @@ export function MemberFilterBar({ className }: { className?: string }) {
 }
 
 function FilterChip({
-  active,
-  color,
-  onClick,
-  label,
+  active, color, onClick, label, emoji,
 }: {
   active: boolean;
   color?: string;
   onClick: () => void;
   label: string;
+  emoji?: string | null;
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+        "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-card text-foreground hover:bg-accent",
       )}
       style={color && !active ? { borderColor: color + "55", color } : undefined}
     >
+      {emoji && <span>{emoji}</span>}
       {label}
     </button>
   );
 }
 
 export function MemberDot({
-  color,
-  label,
-  className,
+  color, label, className, emoji,
 }: {
   color: string;
   label?: string;
   className?: string;
+  emoji?: string | null;
 }) {
   return (
     <span
@@ -70,7 +69,7 @@ export function MemberDot({
       )}
       style={{ borderColor: color + "55", color, background: color + "15" }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+      {emoji ? <span className="text-xs leading-none">{emoji}</span> : <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />}
       {label}
     </span>
   );
