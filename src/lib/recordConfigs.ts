@@ -2,7 +2,7 @@ import {
   CURRENCIES, BANKS, PROPERTY_PURPOSE, INSURANCE_FREQ, INSURANCE_CATEGORIES, INVESTMENT_TYPES,
 } from "./options";
 
-export type FieldType = "text" | "number" | "date" | "select" | "textarea" | "member";
+export type FieldType = "text" | "number" | "date" | "select" | "textarea" | "member" | "chips";
 export type SelectOption = string | { value: string; label: string };
 
 export type FieldDef = {
@@ -13,9 +13,10 @@ export type FieldDef = {
   options?: SelectOption[];
   default?: any;
   placeholder?: string;
-  money?: boolean;          // render with MoneyInput + currency prefix
-  currencyFrom?: string;    // field key whose value drives the currency symbol
+  money?: boolean;
+  currencyFrom?: string;
   hideOnAdd?: boolean;
+  section?: string;
 };
 
 export type RecordConfig = {
@@ -25,28 +26,47 @@ export type RecordConfig = {
   fields: FieldDef[];
 };
 
+const RATE_TYPES = ["Fixed", "Floating", "SORA-pegged"];
+
 export const recordConfigs: Record<string, RecordConfig> = {
   properties: {
     table: "properties",
     queryKey: "properties",
     label: "Property",
     fields: [
-      { key: "name", label: "Property name", type: "text", required: true, placeholder: "e.g. London Flat" },
-      { key: "member_id", label: "Owner", type: "member" },
-      { key: "purpose", label: "Purpose", type: "select", options: PROPERTY_PURPOSE, default: "capital_growth" },
-      { key: "currency", label: "Currency", type: "select", options: CURRENCIES, default: "SGD" },
-      { key: "purchase_price", label: "Purchase price", type: "number", money: true, currencyFrom: "currency" },
-      { key: "current_value",  label: "Current value",  type: "number", money: true, currencyFrom: "currency" },
-      { key: "mortgage_bank", label: "Mortgage bank", type: "select", options: BANKS },
-      { key: "mortgage_balance", label: "Mortgage balance", type: "number", money: true, currencyFrom: "currency" },
-      { key: "monthly_payment", label: "Monthly payment", type: "number", money: true, currencyFrom: "currency" },
-      { key: "interest_rate", label: "Interest rate %", type: "number" },
-      { key: "fixed_rate_end", label: "Fixed rate ends", type: "date" },
-      { key: "monthly_rent", label: "Monthly rent", type: "number", money: true, currencyFrom: "currency" },
-      { key: "monthly_costs", label: "Monthly costs", type: "number", money: true, currencyFrom: "currency" },
-      { key: "strategy", label: "Strategy", type: "text", placeholder: "e.g. Capital appreciation at 5% p.a., sell by 2028" },
-      // NOTE: action/notes columns are not in the properties table; we use 'strategy' for the
-      // short headline and let users keep detailed notes via the dedicated Notes section.
+      // 📍 Property Details
+      { key: "name", label: "Property name", type: "text", required: true, placeholder: "e.g. London Flat", section: "📍 Property Details" },
+      { key: "address", label: "Address", type: "text", section: "📍 Property Details" },
+      { key: "member_id", label: "Owner", type: "member", section: "📍 Property Details" },
+      { key: "purpose", label: "Purpose", type: "select", options: PROPERTY_PURPOSE, default: "capital_growth", section: "📍 Property Details" },
+      { key: "currency", label: "Currency", type: "select", options: CURRENCIES, default: "SGD", section: "📍 Property Details" },
+
+      // 💰 Financials
+      { key: "purchase_price", label: "Purchase price", type: "number", money: true, currencyFrom: "currency", section: "💰 Financials" },
+      { key: "purchase_date", label: "Purchase date", type: "date", section: "💰 Financials" },
+      { key: "current_value",  label: "Current estimated value",  type: "number", money: true, currencyFrom: "currency", section: "💰 Financials" },
+
+      // 🏦 Mortgage
+      { key: "mortgage_bank", label: "Mortgage bank", type: "select", options: BANKS, section: "🏦 Mortgage" },
+      { key: "mortgage_balance", label: "Mortgage balance", type: "number", money: true, currencyFrom: "currency", section: "🏦 Mortgage" },
+      { key: "monthly_payment", label: "Monthly mortgage payment", type: "number", money: true, currencyFrom: "currency", section: "🏦 Mortgage" },
+      { key: "interest_rate", label: "Interest rate %", type: "number", section: "🏦 Mortgage" },
+      { key: "rate_type", label: "Rate type", type: "select", options: RATE_TYPES, section: "🏦 Mortgage" },
+      { key: "fixed_rate_end", label: "Rate ends / Next reprice date", type: "date", section: "🏦 Mortgage" },
+
+      // 🏠 Rental
+      { key: "monthly_rent", label: "Monthly rent", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "market_rent", label: "Estimated market rent", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "cost_management", label: "Management fee (monthly)", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "cost_property_tax", label: "Property tax (monthly)", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "cost_fire_insurance", label: "Fire insurance (monthly)", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "cost_maintenance", label: "Maintenance / repairs (monthly)", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+      { key: "cost_other_label", label: "Other cost label", type: "text", placeholder: "e.g. HOA fees", section: "🏠 Rental" },
+      { key: "cost_other", label: "Other cost (monthly)", type: "number", money: true, currencyFrom: "currency", section: "🏠 Rental" },
+
+      // 🎯 Strategy & Action
+      { key: "strategy", label: "Investment strategy", type: "text", placeholder: "e.g. Capital appreciation at 5% p.a., sell by 2028", section: "🎯 Strategy & Action" },
+      { key: "action_note", label: "Action", type: "text", placeholder: "e.g. Ask UOB for repricing rate May 2026", section: "🎯 Strategy & Action" },
     ],
   },
 
@@ -66,7 +86,6 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "rate_label", label: "Rate label", type: "text", placeholder: "e.g. SORA + 0.8%" },
       { key: "reprice_date", label: "Reprice date", type: "date" },
       { key: "action", label: "Action", type: "text", placeholder: "e.g. Ask UOB for repricing rate by May 2026" },
-      { key: "notes", label: "Notes", type: "textarea", placeholder: "Background, history, advisor info…" },
     ],
   },
 
@@ -83,9 +102,9 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "premium", label: "Premium", type: "number", money: true },
       { key: "frequency", label: "Frequency", type: "select", options: INSURANCE_FREQ, default: "annual" },
       { key: "sum_assured", label: "Sum assured", type: "number", money: true },
-      { key: "start_date", label: "Start date", type: "date" },
-      { key: "end_date", label: "End date", type: "date" },
-      { key: "next_due_date", label: "Next due date", type: "date" },
+      { key: "start_date", label: "Policy start date", type: "date" },
+      { key: "end_date", label: "Policy end date", type: "date" },
+      { key: "next_due_date", label: "Next premium due", type: "date" },
       { key: "action", label: "Action", type: "text", placeholder: "e.g. Renew before Mar 2027" },
     ],
   },
@@ -127,8 +146,10 @@ export const recordConfigs: Record<string, RecordConfig> = {
     queryKey: "health",
     label: "Health Item",
     fields: [
-      { key: "name", label: "Condition / item", type: "text", required: true },
+      { key: "name", label: "Condition name", type: "text", required: true },
       { key: "member_id", label: "Person", type: "member", required: true },
+      { key: "supplements", label: "Take (supplements)", type: "chips", placeholder: "Type and press Enter…", default: [] },
+      { key: "actions", label: "Do (actions)", type: "chips", placeholder: "Type and press Enter…", default: [] },
       { key: "details", label: "Details", type: "textarea" },
     ],
   },
