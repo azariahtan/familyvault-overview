@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { recordConfigs, type FieldDef, type SelectOption } from "@/lib/recordConfigs";
 import { MoneyInput } from "./MoneyInput";
+import { X } from "lucide-react";
 import { addDays, parseISO } from "date-fns";
 
 export function RecordFormSheet({
-  configKey,
-  open,
-  onOpenChange,
-  initial,
-  recordId,
+  configKey, open, onOpenChange, initial, recordId,
 }: {
   configKey: keyof typeof recordConfigs;
   open: boolean;
@@ -47,6 +44,10 @@ export function RecordFormSheet({
       const payload: Record<string, any> = {};
       for (const f of cfg.fields) {
         let v = values[f.key];
+        if (f.type === "chips") {
+          payload[f.key] = Array.isArray(v) ? v : [];
+          continue;
+        }
         if (v === "" || v === undefined) {
           if (isEdit) payload[f.key] = null;
           continue;
@@ -62,7 +63,6 @@ export function RecordFormSheet({
         payload[f.key] = v;
       }
 
-      // Savings: infer group_name from maturity_date when missing
       if (cfg.table === "savings_accounts" && !payload.group_name) {
         payload.group_name = payload.maturity_date ? "Fixed Deposits" : "Bank Accounts";
       }
@@ -85,14 +85,13 @@ export function RecordFormSheet({
         savedId = (data as any)?.id;
       }
 
-      // Auto-create FD maturity reminder (30 days before)
       if (cfg.table === "savings_accounts" && payload.maturity_date && savedId) {
         try {
           const remindAt = addDays(parseISO(payload.maturity_date), -30);
           await supabase.from("reminders").insert({
             entity_type: "savings",
             entity_id: savedId,
-            what: `FD Maturing — ${payload.institution ?? ""} ${payload.balance ? "$" + Number(payload.balance).toLocaleString() : ""} matures on ${payload.maturity_date}. Decide reinvestment.`,
+            what: `FD Maturing — ${payload.institution ?? ""} matures on ${payload.maturity_date}.`,
             remind_at: remindAt.toISOString(),
           });
         } catch { /* non-fatal */ }
@@ -109,6 +108,15 @@ export function RecordFormSheet({
     }
   }
 
+  // Group fields by section (or "" for ungrouped)
+  const sections: { title: string; fields: FieldDef[] }[] = [];
+  for (const f of cfg.fields) {
+    const title = f.section ?? "";
+    let s = sections.find((x) => x.title === title);
+    if (!s) { s = { title, fields: [] }; sections.push(s); }
+    s.fields.push(f);
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl px-4 pb-2 pt-3">
@@ -116,27 +124,34 @@ export function RecordFormSheet({
         <SheetHeader>
           <SheetTitle className="text-base">{isEdit ? `Edit ${cfg.label}` : `Add ${cfg.label}`}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={submit} className="mt-4 space-y-3 pb-4">
-          {cfg.fields.map((f) => (
-            <div key={f.key} className="space-y-1.5">
-              <Label htmlFor={f.key} className="text-xs">
-                {f.label}
-                {f.required && <span className="text-urgent"> *</span>}
-              </Label>
-              <FieldInput
-                f={f}
-                value={values[f.key]}
-                onChange={(v) => setVal(f.key, v)}
-                members={members}
-                currency={(f.currencyFrom && values[f.currencyFrom]) || "SGD"}
-              />
+        <form onSubmit={submit} className="mt-4 space-y-4 pb-4">
+          {sections.map((sec, idx) => (
+            <div key={idx} className="space-y-3">
+              {sec.title && (
+                <div className="border-b border-border pb-1.5 pt-1 text-sm font-bold">{sec.title}</div>
+              )}
+              {sec.fields.map((f) => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label htmlFor={f.key} className="text-xs">
+                    {f.label}
+                    {f.required && <span className="text-urgent"> *</span>}
+                  </Label>
+                  <FieldInput
+                    f={f}
+                    value={values[f.key]}
+                    onChange={(v) => setVal(f.key, v)}
+                    members={members}
+                    currency={(f.currencyFrom && values[f.currencyFrom]) || "SGD"}
+                  />
+                </div>
+              ))}
             </div>
           ))}
           <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" className="flex-1 cursor-pointer" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={submitting}>
+            <Button type="submit" className="flex-1 cursor-pointer" disabled={submitting}>
               {submitting ? "Saving…" : "Save"}
             </Button>
           </div>
@@ -146,22 +161,52 @@ export function RecordFormSheet({
   );
 }
 
-function optValue(o: SelectOption) {
-  return typeof o === "string" ? o : o.value;
-}
-function optLabel(o: SelectOption) {
-  return typeof o === "string" ? o : o.label;
+function optValue(o: SelectOption) { return typeof o === "string" ? o : o.value; }
+function optLabel(o: SelectOption) { return typeof o === "string" ? o : o.label; }
+
+function ChipsInput({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  const [draft, setDraft] = useState("");
+  function add() {
+    const t = draft.trim();
+    if (!t) return;
+    if (!value.includes(t)) onChange([...value, t]);
+    setDraft("");
+  }
+  function onKey(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); }
+    else if (e.key === "Backspace" && !draft && value.length) {
+      onChange(value.slice(0, -1));
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-1.5">
+      {value.map((v) => (
+        <span key={v} className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-xs font-medium">
+          {v}
+          <button type="button" onClick={() => onChange(value.filter((x) => x !== v))} className="cursor-pointer rounded-full hover:bg-background/60">
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={onKey}
+        onBlur={add}
+        placeholder={placeholder || "Type and press Enter…"}
+        className="min-w-[120px] flex-1 bg-transparent px-1 py-0.5 text-sm outline-none"
+      />
+    </div>
+  );
 }
 
-function FieldInput({
-  f, value, onChange, members, currency,
-}: {
-  f: FieldDef;
-  value: any;
-  onChange: (v: any) => void;
-  members: any[];
-  currency: string;
+function FieldInput({ f, value, onChange, members, currency }: {
+  f: FieldDef; value: any; onChange: (v: any) => void; members: any[]; currency: string;
 }) {
+  if (f.type === "chips") {
+    const arr: string[] = Array.isArray(value) ? value : [];
+    return <ChipsInput value={arr} onChange={onChange} placeholder={f.placeholder} />;
+  }
   if (f.type === "textarea") {
     return <Textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder} rows={3} />;
   }
@@ -170,7 +215,7 @@ function FieldInput({
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm transition focus:border-primary focus:outline-none"
+        className="h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm transition focus:border-primary focus:outline-none"
       >
         <option value="">Select…</option>
         {f.options?.map((o) => (
@@ -184,10 +229,10 @@ function FieldInput({
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none"
+        className="h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none"
       >
         <option value="">{f.required ? "Select person…" : "— None —"}</option>
-        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        {members.map((m) => <option key={m.id} value={m.id}>{m.emoji ? `${m.emoji} ` : ""}{m.name}</option>)}
       </select>
     );
   }
@@ -207,9 +252,15 @@ function seed(fields: FieldDef[], initial?: Record<string, any>) {
   const v: Record<string, any> = {};
   for (const f of fields) {
     const init = initial?.[f.key];
-    if (init !== undefined && init !== null) v[f.key] = init;
-    else if (f.default !== undefined) v[f.key] = f.default;
-    else v[f.key] = "";
+    if (f.type === "chips") {
+      v[f.key] = Array.isArray(init) ? init : (Array.isArray(f.default) ? f.default : []);
+    } else if (init !== undefined && init !== null) {
+      v[f.key] = init;
+    } else if (f.default !== undefined) {
+      v[f.key] = f.default;
+    } else {
+      v[f.key] = "";
+    }
   }
   return v;
 }
