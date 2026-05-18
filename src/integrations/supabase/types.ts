@@ -437,6 +437,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          emoji: string
           id: string
           name: string
           short_name: string | null
@@ -445,6 +446,7 @@ export type Database = {
         Insert: {
           color: string
           created_at?: string
+          emoji?: string
           id?: string
           name: string
           short_name?: string | null
@@ -453,6 +455,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          emoji?: string
           id?: string
           name?: string
           short_name?: string | null
@@ -462,6 +465,14 @@ export type Database = {
       }
       properties: {
         Row: {
+          action_note: string | null
+          address: string | null
+          cost_fire_insurance: number | null
+          cost_maintenance: number | null
+          cost_management: number | null
+          cost_other: number | null
+          cost_other_label: string | null
+          cost_property_tax: number | null
           created_at: string
           currency: string
           current_value: number | null
@@ -478,13 +489,23 @@ export type Database = {
           mortgage_balance: number | null
           mortgage_bank: string | null
           name: string
+          purchase_date: string | null
           purchase_price: number | null
           purpose: Database["public"]["Enums"]["property_purpose"]
+          rate_type: string | null
           status: Database["public"]["Enums"]["record_status"]
           strategy: string | null
           updated_at: string
         }
         Insert: {
+          action_note?: string | null
+          address?: string | null
+          cost_fire_insurance?: number | null
+          cost_maintenance?: number | null
+          cost_management?: number | null
+          cost_other?: number | null
+          cost_other_label?: string | null
+          cost_property_tax?: number | null
           created_at?: string
           currency?: string
           current_value?: number | null
@@ -501,13 +522,23 @@ export type Database = {
           mortgage_balance?: number | null
           mortgage_bank?: string | null
           name: string
+          purchase_date?: string | null
           purchase_price?: number | null
           purpose?: Database["public"]["Enums"]["property_purpose"]
+          rate_type?: string | null
           status?: Database["public"]["Enums"]["record_status"]
           strategy?: string | null
           updated_at?: string
         }
         Update: {
+          action_note?: string | null
+          address?: string | null
+          cost_fire_insurance?: number | null
+          cost_maintenance?: number | null
+          cost_management?: number | null
+          cost_other?: number | null
+          cost_other_label?: string | null
+          cost_property_tax?: number | null
           created_at?: string
           currency?: string
           current_value?: number | null
@@ -524,8 +555,10 @@ export type Database = {
           mortgage_balance?: number | null
           mortgage_bank?: string | null
           name?: string
+          purchase_date?: string | null
           purchase_price?: number | null
           purpose?: Database["public"]["Enums"]["property_purpose"]
+          rate_type?: string | null
           status?: Database["public"]["Enums"]["record_status"]
           strategy?: string | null
           updated_at?: string

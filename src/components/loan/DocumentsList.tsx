@@ -2,14 +2,12 @@ import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Upload, ExternalLink, Trash2, Sparkles } from "lucide-react";
+import { Upload, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export function DocumentsList({ entityType, entityId }: { entityType: string; entityId: string }) {
   const qc = useQueryClient();
-  const [label, setLabel] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -40,10 +38,9 @@ export function DocumentsList({ entityType, entityId }: { entityType: string; en
         entity_id: entityId,
         path,
         bucket: "vault-docs",
-        label: label || file.name,
+        label: file.name,
       });
       if (insErr) throw insErr;
-      setLabel("");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["docs", entityType, entityId] });
       toast.success("Document uploaded");
@@ -54,8 +51,17 @@ export function DocumentsList({ entityType, entityId }: { entityType: string; en
     }
   }
 
-  function urlFor(path: string) {
-    return supabase.storage.from("vault-docs").getPublicUrl(path).data.publicUrl;
+  async function urlFor(path: string) {
+    const pub = supabase.storage.from("vault-docs").getPublicUrl(path).data.publicUrl;
+    return pub;
+  }
+
+  async function openDoc(e: React.MouseEvent, path: string) {
+    e.preventDefault();
+    // Try signed URL first for reliability, fall back to public URL.
+    const { data } = await supabase.storage.from("vault-docs").createSignedUrl(path, 3600);
+    const url = data?.signedUrl || (await urlFor(path));
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function del(id: string, path: string) {
@@ -70,34 +76,32 @@ export function DocumentsList({ entityType, entityId }: { entityType: string; en
       <ul className="space-y-1.5">
         {docs.map((d: any) => (
           <li key={d.id} className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1.5 text-sm">
-            <a href={urlFor(d.path)} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate">
+            <a
+              href="#"
+              onClick={(e) => openDoc(e, d.path)}
+              className="flex flex-1 cursor-pointer items-center gap-2 truncate hover:underline"
+            >
               <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{d.label || d.path.split("/").pop()}</span>
+              <span className="truncate">{d.path.split("/").pop()}</span>
               <span className="text-xs text-muted-foreground">
                 {format(new Date(d.uploaded_at), "dd MMM yyyy")}
               </span>
             </a>
-            <button onClick={() => del(d.id, d.path)} className="text-urgent">
+            <button onClick={() => del(d.id, d.path)} className="cursor-pointer text-urgent" aria-label="Delete document">
               <Trash2 className="h-4 w-4" />
             </button>
           </li>
         ))}
         {docs.length === 0 && <li className="text-xs text-muted-foreground">No documents yet.</li>}
       </ul>
-      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-2">
-        <Input placeholder="Label (optional)" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <div className="flex items-center gap-2">
-          <input ref={fileRef} type="file" onChange={onFile} className="hidden" id={`up-${entityId}`} />
-          <Button asChild size="sm" variant="outline" disabled={uploading}>
-            <label htmlFor={`up-${entityId}`} className="cursor-pointer">
-              <Upload className="mr-1 h-3.5 w-3.5" />
-              {uploading ? "Uploading…" : "Upload"}
-            </label>
-          </Button>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Sparkles className="h-3 w-3" /> Auto-read with AI (coming soon)
-          </span>
-        </div>
+      <div className="flex items-center gap-2 rounded-md border border-dashed border-border/60 p-2">
+        <input ref={fileRef} type="file" onChange={onFile} className="hidden" id={`up-${entityId}`} />
+        <Button asChild size="sm" variant="outline" disabled={uploading}>
+          <label htmlFor={`up-${entityId}`} className="cursor-pointer">
+            <Upload className="mr-1 h-3.5 w-3.5" />
+            {uploading ? "Uploading…" : "Upload document"}
+          </label>
+        </Button>
       </div>
     </div>
   );

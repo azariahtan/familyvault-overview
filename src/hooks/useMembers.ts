@@ -7,6 +7,7 @@ export type Member = {
   short_name: string | null;
   color: string;
   sort_order: number;
+  emoji: string | null;
 };
 
 export function useMembers() {
