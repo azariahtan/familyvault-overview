@@ -11,11 +11,39 @@ import { fmtMoney, fmtDate, fmtPct } from "@/lib/format";
 import { HashHighlight } from "@/components/HashHighlight";
 import { useEditRecord } from "@/components/EditRecordButton";
 import { PROPERTY_PURPOSE_LABEL } from "@/lib/options";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { NotesLog } from "@/components/NotesLog";
+import { DocumentsList } from "@/components/loan/DocumentsList";
 
 export const Route = createFileRoute("/property")({
   component: PropertyPage,
   head: () => ({ meta: [{ title: "Property — FamilyVault" }] }),
 });
+
+function totalCosts(p: any) {
+  return ["cost_management","cost_property_tax","cost_fire_insurance","cost_maintenance","cost_other"]
+    .reduce((s, k) => s + (Number(p[k]) || 0), 0) || Number(p.monthly_costs) || 0;
+}
+
+function yearsBetween(dateStr: string | null | undefined, now = new Date()) {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  return (now.getTime() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
+}
+
+function capitalGainPa(p: any): number | null {
+  const purchase = Number(p.purchase_price) || 0;
+  const current = Number(p.current_value) || 0;
+  const years = yearsBetween(p.purchase_date);
+  if (!purchase || !years || years < 0.1) return null;
+  return ((current - purchase) / purchase / years) * 100;
+}
+
+function parseTargetPct(strategy: string | null | undefined): number | null {
+  if (!strategy) return null;
+  const m = strategy.match(/(\d+(?:\.\d+)?)\s*%/);
+  return m ? parseFloat(m[1]) : null;
+}
 
 function PropertyPage() {
   const memberFilter = useAppStore((s) => s.memberFilter);
@@ -74,6 +102,18 @@ function PropertyPage() {
 
 function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => void; onDelete: () => void }) {
   const edit = useEditRecord("properties", p);
+  const costs = totalCosts(p);
+  const gainPa = capitalGainPa(p);
+  const target = parseTargetPct(p.strategy);
+  const gainColor =
+    gainPa == null || target == null ? "" :
+    gainPa >= target ? "text-settled" :
+    gainPa >= target - 1 ? "text-review" : "text-urgent";
+  const grossYield = p.current_value && p.monthly_rent ? ((p.monthly_rent * 12) / p.current_value) * 100 : null;
+  const netRent = (Number(p.monthly_rent) || 0) - costs;
+  const netYield = p.current_value ? (netRent * 12) / p.current_value * 100 : null;
+  const cashFlow = netRent - (Number(p.monthly_payment) || 0);
+
   return (
     <HashHighlight id={`record-${p.id}`}>
       <RecordCard
@@ -82,7 +122,7 @@ function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => 
         memberId={p.member_id}
         status={p.status}
         onStatusChange={onStatus}
-        action={p.strategy}
+        action={p.action_note}
         onEdit={edit.open}
         onDelete={onDelete}
         rightMeta={
@@ -92,25 +132,48 @@ function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => 
           </div>
         }
       >
+        <Section title="Strategy">
+          <p className="text-sm text-foreground/80">{p.strategy || "—"}</p>
+        </Section>
         <Section title="Financials">
           <FieldRow label="Purchase price" value={fmtMoney(p.purchase_price, p.currency)} />
+          <FieldRow label="Purchase date" value={fmtDate(p.purchase_date)} />
           <FieldRow label="Current value" value={fmtMoney(p.current_value, p.currency)} />
           <FieldRow label="Capital gain" value={fmtMoney((p.current_value || 0) - (p.purchase_price || 0), p.currency)} />
+          <FieldRow
+            label="Capital gain p.a."
+            value={gainPa == null ? "—" : <span className={`font-semibold ${gainColor}`}>{gainPa.toFixed(1)}%</span>}
+          />
           <FieldRow label="Mortgage" value={p.mortgage_bank ? `${p.mortgage_bank} · ${fmtMoney(p.mortgage_balance, p.currency)}` : "—"} />
           <FieldRow label="Monthly payment" value={fmtMoney(p.monthly_payment, p.currency)} />
           <FieldRow label="Interest rate" value={fmtPct(p.interest_rate)} />
-          <FieldRow label="Fixed rate ends" value={fmtDate(p.fixed_rate_end)} />
+          <FieldRow label="Rate type" value={p.rate_type ?? "—"} />
+          <FieldRow label="Rate ends / Reprice" value={fmtDate(p.fixed_rate_end)} />
           <FieldRow label="Monthly rent" value={fmtMoney(p.monthly_rent, p.currency)} />
-          <FieldRow label="Monthly costs" value={fmtMoney(p.monthly_costs, p.currency)} />
+        </Section>
+
+        <Section title="Monthly Costs">
+          <FieldRow label="Management fee" value={fmtMoney(p.cost_management, p.currency)} />
+          <FieldRow label="Property tax" value={fmtMoney(p.cost_property_tax, p.currency)} />
+          <FieldRow label="Fire insurance" value={fmtMoney(p.cost_fire_insurance, p.currency)} />
+          <FieldRow label="Maintenance / repairs" value={fmtMoney(p.cost_maintenance, p.currency)} />
+          <FieldRow label={p.cost_other_label || "Other"} value={fmtMoney(p.cost_other, p.currency)} />
+          <FieldRow label={<span className="font-bold">Total monthly costs</span> as any} value={<span className="font-bold">{fmtMoney(costs, p.currency)}</span>} />
+          <FieldRow label="Gross yield %" value={grossYield != null ? fmtPct(grossYield) : "—"} />
+          <FieldRow label="Net yield %" value={netYield != null ? fmtPct(netYield) : "—"} />
+          <FieldRow label="Monthly cash flow" value={<span className={cashFlow >= 0 ? "text-settled" : "text-urgent"}>{fmtMoney(cashFlow, p.currency)}</span>} />
           <FieldRow
             label="Loan vs Value %"
             value={p.current_value && p.mortgage_balance ? fmtPct((p.mortgage_balance / p.current_value) * 100) : "—"}
           />
-          <FieldRow
-            label="Gross yield %"
-            value={p.current_value && p.monthly_rent ? fmtPct(((p.monthly_rent * 12) / p.current_value) * 100) : "—"}
-          />
         </Section>
+
+        <CollapsibleSection icon={<span>📝</span>} title="Notes">
+          <NotesLog entityType="property" entityId={p.id} />
+        </CollapsibleSection>
+        <CollapsibleSection icon={<span>📎</span>} title="Documents">
+          <DocumentsList entityType="property" entityId={p.id} />
+        </CollapsibleSection>
       </RecordCard>
       {edit.element}
     </HashHighlight>
