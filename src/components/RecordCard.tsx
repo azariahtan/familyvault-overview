@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { StatusToggle, type Status } from "./StatusToggle";
 import { MemberTag } from "./MemberTag";
@@ -17,6 +17,7 @@ type Props = {
   onDelete?: () => void;
   defaultOpen?: boolean;
   highlight?: boolean;
+  persistKey?: string;
 };
 
 const tintBg: Record<Status, string> = {
@@ -25,21 +26,25 @@ const tintBg: Record<Status, string> = {
   settled: "bg-settled-tint border-settled-border",
 };
 
+function readPersisted(key: string | undefined, def: boolean): boolean {
+  if (!key || typeof window === "undefined") return def;
+  const v = localStorage.getItem(`fv:open:${key}`);
+  if (v === "1") return true;
+  if (v === "0") return false;
+  return def;
+}
+
 export function RecordCard({
-  title,
-  subtitle,
-  memberId,
-  status,
-  onStatusChange,
-  action,
-  rightMeta,
-  children,
-  onEdit,
-  onDelete,
-  defaultOpen = false,
-  highlight,
+  title, subtitle, memberId, status, onStatusChange, action, rightMeta, children,
+  onEdit, onDelete, defaultOpen = false, highlight, persistKey,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(() => readPersisted(persistKey, defaultOpen));
+
+  useEffect(() => {
+    if (!persistKey || typeof window === "undefined") return;
+    localStorage.setItem(`fv:open:${persistKey}`, open ? "1" : "0");
+  }, [open, persistKey]);
+
   return (
     <article
       className={cn(
@@ -48,15 +53,11 @@ export function RecordCard({
         highlight && "ring-2 ring-primary",
       )}
     >
-      {/* Top-right corner action icons */}
       <div className="absolute right-2 top-2 z-10 flex gap-0.5">
         {onEdit && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="rounded-md p-1 text-muted-foreground hover:bg-background/60 hover:text-foreground"
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="cursor-pointer rounded-md p-1 text-muted-foreground hover:bg-background/60 hover:text-foreground"
             aria-label="Edit"
           >
             <Pencil className="h-[18px] w-[18px]" />
@@ -64,11 +65,8 @@ export function RecordCard({
         )}
         {onDelete && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm("Delete this record?")) onDelete();
-            }}
-            className="rounded-md p-1 text-urgent hover:bg-urgent/10"
+            onClick={(e) => { e.stopPropagation(); if (confirm("Delete this record?")) onDelete(); }}
+            className="cursor-pointer rounded-md p-1 text-urgent hover:bg-urgent/10"
             aria-label="Delete"
           >
             <Trash2 className="h-[18px] w-[18px]" />
@@ -78,7 +76,7 @@ export function RecordCard({
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-3 p-4 pr-20 text-left"
+        className="flex w-full cursor-pointer items-start gap-3 p-4 pr-20 text-left"
       >
         <div className="flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
