@@ -2,14 +2,12 @@ import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Upload, ExternalLink, Trash2, Sparkles } from "lucide-react";
+import { Upload, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export function DocumentsList({ entityType, entityId }: { entityType: string; entityId: string }) {
   const qc = useQueryClient();
-  const [label, setLabel] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
