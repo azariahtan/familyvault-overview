@@ -26,7 +26,6 @@ function Dashboard() {
   const { today } = useToday();
   const memberFilter = useAppStore((s) => s.memberFilter);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
-  const [alertsOpen, setAlertsOpen] = useState(false);
   const propStatus = useStatusMutation("properties", "properties");
   const propDel = useDeleteMutation("properties", "properties");
 
@@ -147,68 +146,7 @@ function Dashboard() {
   return (
     <div className="space-y-5">
 
-      {/* TOP HEADER — family name + bell */}
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h1 className="text-xl font-bold">FamilyVault</h1>
-          <p className="text-xs text-muted-foreground">Your one stop for everything family</p>
-        </div>
-        <button
-          onClick={() => setAlertsOpen(v => !v)}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card hover:bg-accent"
-        >
-          <Bell className="h-5 w-5" />
-          {alertCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-urgent text-[10px] font-bold text-white">
-              {alertCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* BELL PANEL — slides open */}
-      {alertsOpen && (
-        <section className="rounded-2xl border border-urgent/40 bg-urgent-soft/20 p-4 space-y-2">
-          <h2 className="text-sm font-bold mb-2">All Alerts</h2>
-          {alertCount === 0 && <p className="text-sm text-muted-foreground text-center py-4">No alerts right now ✓</p>}
-          {urgent.map(({ kind, row, href, icon: Icon }, i) => (
-            <Link key={i} to={href as any} hash={`record-${row.id}`} onClick={() => setAlertsOpen(false)}
-              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
-              <Icon className="h-4 w-4 text-urgent" />
-              <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-semibold uppercase text-urgent mr-2">Urgent</span>
-                <span className="text-sm font-semibold">{row.name || row.bank}</span>
-              </div>
-              <MemberTag memberId={row.member_id} />
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ))}
-          {review.map(({ kind, row, href, icon: Icon }, i) => (
-            <Link key={i} to={href as any} hash={`record-${row.id}`} onClick={() => setAlertsOpen(false)}
-              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
-              <Icon className="h-4 w-4 text-review" />
-              <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-semibold uppercase text-review mr-2">Review</span>
-                <span className="text-sm font-semibold">{row.name || row.bank}</span>
-              </div>
-              <MemberTag memberId={row.member_id} />
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ))}
-          {upcoming.filter(u => u.daysLeft <= 7).map((u, i) => (
-            <Link key={i} to={u.href as any} hash={`record-${u.recordId}`} onClick={() => setAlertsOpen(false)}
-              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
-              <Bell className="h-4 w-4 text-urgent" />
-              <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-semibold uppercase text-urgent mr-2">Due in {u.daysLeft}d</span>
-                <span className="text-sm font-semibold">{u.label}</span>
-              </div>
-              <MemberTag memberId={u.member_id} />
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ))}
-        </section>
-      )}
+     
 
       {/* MEMBER FILTER — right at the top so everyone sees it immediately */}
       <MemberFilterBar />
