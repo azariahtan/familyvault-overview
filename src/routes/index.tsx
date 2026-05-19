@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/StatusToggle";
 import { useAppStore } from "@/lib/store";
 import { addDays, isAfter, isBefore, parseISO } from "date-fns";
 import { LifetimeChart } from "@/components/LifetimeChart";
-import { ChevronRight, Building2, Shield, Landmark, TrendingUp, ChevronDown } from "lucide-react";
+import { ChevronRight, Building2, Shield, Landmark, TrendingUp, ChevronDown, Bell } from "lucide-react";
 import { useState } from "react";
 import { sortByStatus } from "@/lib/sort";
 import { RecordCard, FieldRow, Section } from "@/components/RecordCard";
@@ -26,6 +26,7 @@ function Dashboard() {
   const { today } = useToday();
   const memberFilter = useAppStore((s) => s.memberFilter);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const propStatus = useStatusMutation("properties", "properties");
   const propDel = useDeleteMutation("properties", "properties");
 
@@ -71,23 +72,61 @@ function Dashboard() {
     loans.reduce((s: number, l: any) => s + (Number(l.monthly_payment) || 0), 0);
   const netCashFlow = monthlyIn - monthlyOut;
 
-  // Upcoming payments (next 30d)
-  const horizon = addDays(today, 30);
-  type Upcoming = { date: string; label: string; amount?: number | null; member_id?: string | null; href: string; recordId: string };
+  // Upcoming payments — next 30 days — all sources
+  const horizon30 = addDays(today, 30);
+  const horizon90 = addDays(today, 90);
+  type Upcoming = { date: string; label: string; amount?: number | null; member_id?: string | null; href: string; recordId: string; daysLeft: number };
+
+  function daysUntil(dateStr: string) {
+    const d = parseISO(dateStr);
+    return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
   const upcoming: Upcoming[] = [];
+
+  // Insurance premium due dates
   for (const p of insurance as any[]) {
-    if (p.next_due_date && isAfter(parseISO(p.next_due_date), today) && isBefore(parseISO(p.next_due_date), horizon)) {
-      upcoming.push({ date: p.next_due_date, label: p.name, amount: p.premium, member_id: p.member_id, href: "/insurance", recordId: p.id });
+    if (p.next_due_date) {
+      const d = parseISO(p.next_due_date);
+      if (isAfter(d, today) && isBefore(d, horizon30)) {
+        upcoming.push({ date: p.next_due_date, label: p.name, amount: p.premium, member_id: p.member_id, href: "/insurance", recordId: p.id, daysLeft: daysUntil(p.next_due_date) });
+      }
     }
   }
+
+  // Property fixed rate ends
   for (const p of properties as any[]) {
-    if (p.fixed_rate_end && isAfter(parseISO(p.fixed_rate_end), today) && isBefore(parseISO(p.fixed_rate_end), horizon)) {
-      upcoming.push({ date: p.fixed_rate_end, label: `${p.name} — fixed rate ends`, amount: null, member_id: p.member_id, href: "/property", recordId: p.id });
+    if (p.fixed_rate_end) {
+      const d = parseISO(p.fixed_rate_end);
+      if (isAfter(d, today) && isBefore(d, horizon90)) {
+        upcoming.push({ date: p.fixed_rate_end, label: `${p.name} — fixed rate ends`, amount: null, member_id: p.member_id, href: "/property", recordId: p.id, daysLeft: daysUntil(p.fixed_rate_end) });
+      }
     }
   }
+
+  // Loan reprice dates
+  for (const l of loans as any[]) {
+    if (l.reprice_date) {
+      const d = parseISO(l.reprice_date);
+      if (isAfter(d, today) && isBefore(d, horizon90)) {
+        upcoming.push({ date: l.reprice_date, label: `${l.bank} loan — reprice`, amount: null, member_id: l.member_id, href: "/loans", recordId: l.id, daysLeft: daysUntil(l.reprice_date) });
+      }
+    }
+  }
+
+  // Savings FD maturity dates
+  for (const s of savings as any[]) {
+    if (s.maturity_date) {
+      const d = parseISO(s.maturity_date);
+      if (isAfter(d, today) && isBefore(d, horizon90)) {
+        upcoming.push({ date: s.maturity_date, label: `${s.institution} FD matures`, amount: s.balance, member_id: s.member_id, href: "/savings", recordId: s.id, daysLeft: daysUntil(s.maturity_date) });
+      }
+    }
+  }
+
   upcoming.sort((a, b) => a.date.localeCompare(b.date));
 
-  // Priority + Review
+  // Priority + Review alerts
   const all: Array<{ kind: string; row: any; href: string; icon: any }> = [
     ...properties.map((r: any) => ({ kind: "Property", row: r, href: "/property", icon: Building2 })),
     ...loans.map((r: any) => ({ kind: "Loan", row: r, href: "/loans", icon: Landmark })),
@@ -96,7 +135,7 @@ function Dashboard() {
   ];
   const urgent = all.filter((x) => x.row.status === "urgent");
   const review = all.filter((x) => x.row.status === "review");
-  const alertCount = urgent.length + review.length;
+  const alertCount = urgent.length + review.length + upcoming.filter(u => u.daysLeft <= 7).length;
 
   const dueToday = upcoming.find((u) => u.date === today.toISOString().slice(0, 10));
 
@@ -107,6 +146,74 @@ function Dashboard() {
 
   return (
     <div className="space-y-5">
+
+      {/* TOP HEADER — family name + bell */}
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <h1 className="text-xl font-bold">FamilyVault</h1>
+          <p className="text-xs text-muted-foreground">Your one stop for everything family</p>
+        </div>
+        <button
+          onClick={() => setAlertsOpen(v => !v)}
+          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card hover:bg-accent"
+        >
+          <Bell className="h-5 w-5" />
+          {alertCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-urgent text-[10px] font-bold text-white">
+              {alertCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* BELL PANEL — slides open */}
+      {alertsOpen && (
+        <section className="rounded-2xl border border-urgent/40 bg-urgent-soft/20 p-4 space-y-2">
+          <h2 className="text-sm font-bold mb-2">All Alerts</h2>
+          {alertCount === 0 && <p className="text-sm text-muted-foreground text-center py-4">No alerts right now ✓</p>}
+          {urgent.map(({ kind, row, href, icon: Icon }, i) => (
+            <Link key={i} to={href as any} hash={`record-${row.id}`} onClick={() => setAlertsOpen(false)}
+              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
+              <Icon className="h-4 w-4 text-urgent" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-semibold uppercase text-urgent mr-2">Urgent</span>
+                <span className="text-sm font-semibold">{row.name || row.bank}</span>
+              </div>
+              <MemberTag memberId={row.member_id} />
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          ))}
+          {review.map(({ kind, row, href, icon: Icon }, i) => (
+            <Link key={i} to={href as any} hash={`record-${row.id}`} onClick={() => setAlertsOpen(false)}
+              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
+              <Icon className="h-4 w-4 text-review" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-semibold uppercase text-review mr-2">Review</span>
+                <span className="text-sm font-semibold">{row.name || row.bank}</span>
+              </div>
+              <MemberTag memberId={row.member_id} />
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          ))}
+          {upcoming.filter(u => u.daysLeft <= 7).map((u, i) => (
+            <Link key={i} to={u.href as any} hash={`record-${u.recordId}`} onClick={() => setAlertsOpen(false)}
+              className="flex items-center gap-3 rounded-xl bg-card p-3 hover:bg-accent">
+              <Bell className="h-4 w-4 text-urgent" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-semibold uppercase text-urgent mr-2">Due in {u.daysLeft}d</span>
+                <span className="text-sm font-semibold">{u.label}</span>
+              </div>
+              <MemberTag memberId={u.member_id} />
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          ))}
+        </section>
+      )}
+
+      {/* MEMBER FILTER — right at the top so everyone sees it immediately */}
+      <MemberFilterBar />
+
+      {/* DUE TODAY BANNER */}
       {dueToday && (
         <Link to="/insurance" hash={`record-${dueToday.recordId}`} className="block rounded-2xl bg-review p-4 text-review-foreground">
           <div className="text-xs font-semibold uppercase">Due today</div>
@@ -114,7 +221,7 @@ function Dashboard() {
         </Link>
       )}
 
-      {/* a. KPI row */}
+      {/* KPI ROW */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Total Assets" value={fmtMoney(totalAssets)} />
         <Kpi label="Total Liabilities" value={fmtMoney(totalLiabilities)} />
@@ -135,7 +242,7 @@ function Dashboard() {
         </span>
       </div>
 
-      {/* b. Net Worth Breakdown */}
+      {/* NET WORTH BREAKDOWN */}
       <section className="rounded-2xl border border-border bg-card">
         <button
           onClick={() => setBreakdownOpen((v) => !v)}
@@ -163,10 +270,7 @@ function Dashboard() {
         )}
       </section>
 
-      {/* c. Member filter */}
-      <MemberFilterBar />
-
-      {/* d. Due in next 30 days */}
+      {/* DUE IN NEXT 30 DAYS */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold tracking-tight">Due in the Next 30 Days</h2>
@@ -176,22 +280,27 @@ function Dashboard() {
           <p className="py-6 text-center text-sm text-muted-foreground">Nothing due soon ✓</p>
         ) : (
           <ul className="divide-y divide-border">
-            {upcoming.slice(0, 8).map((u, i) => (
-              <li key={i}>
-                <Link to={u.href as any} hash={`record-${u.recordId}`} className="flex items-center gap-3 py-2.5 text-sm hover:bg-accent/40 -mx-2 px-2 rounded">
-                  <span className="w-20 shrink-0 text-xs font-semibold text-muted-foreground">{fmtDate(u.date)}</span>
-                  <span className="flex-1 truncate">{u.label}</span>
-                  <MemberTag memberId={u.member_id} />
-                  {u.amount != null && <span className="font-semibold">{fmtMoney(u.amount)}</span>}
-                  <ChevronRight className="h-4 w-4 text-primary" />
-                </Link>
-              </li>
-            ))}
+            {upcoming.slice(0, 8).map((u, i) => {
+              const isUrgent = u.daysLeft <= 7;
+              return (
+                <li key={i}>
+                  <Link to={u.href as any} hash={`record-${u.recordId}`} className="flex items-center gap-3 py-2.5 text-sm hover:bg-accent/40 -mx-2 px-2 rounded">
+                    <span className={`w-20 shrink-0 text-xs font-bold ${isUrgent ? "text-urgent" : "text-primary"}`}>
+                      {isUrgent ? `${u.daysLeft}d left` : fmtDate(u.date)}
+                    </span>
+                    <span className="flex-1 truncate">{u.label}</span>
+                    <MemberTag memberId={u.member_id} />
+                    {u.amount != null && <span className="font-semibold">{fmtMoney(u.amount)}</span>}
+                    <ChevronRight className="h-4 w-4 text-primary" />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
-      {/* e. Monthly cash flow bars */}
+      {/* MONTHLY CASH FLOW BARS */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-bold">Monthly Cash Flow</h2>
         <CashFlowBars inflow={monthlyIn} outflow={monthlyOut} />
@@ -203,13 +312,13 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* f. Needs Attention */}
+      {/* NEEDS ATTENTION */}
       {urgent.length > 0 && <PrioritySection title="Needs Attention" items={urgent} />}
 
-      {/* g. Review Needed */}
+      {/* REVIEW NEEDED */}
       {review.length > 0 && <PrioritySection title="Review Needed" items={review} muted showDate />}
 
-      {/* h. Property Overview */}
+      {/* PROPERTY OVERVIEW */}
       {properties.length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-4">
           <h2 className="mb-3 text-sm font-bold">Property Overview</h2>
@@ -264,7 +373,7 @@ function Dashboard() {
         </section>
       )}
 
-      {/* i. Lifetime chart */}
+      {/* LIFETIME CHART */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-1 text-sm font-bold">Lifetime Cash Flow</h2>
         <p className="mb-3 text-xs text-muted-foreground">Projected next 40 years across all records.</p>
@@ -274,24 +383,9 @@ function Dashboard() {
   );
 }
 
-function Kpi({
-  label, value, accent, big, sub,
-}: {
-  label: string;
-  value: string;
-  accent?: "good" | "bad" | "neutral" | "gold";
-  big?: boolean;
-  sub?: string;
-}) {
-  const valueColor =
-    accent === "good" ? "text-settled"
-    : accent === "bad" ? "text-urgent"
-    : accent === "gold" ? "text-primary"
-    : "";
-  const borderTop =
-    accent === "bad" ? "border-t-2 border-t-urgent"
-    : accent === "gold" ? "border-primary/40"
-    : "";
+function Kpi({ label, value, accent, big, sub }: { label: string; value: string; accent?: "good" | "bad" | "neutral" | "gold"; big?: boolean; sub?: string }) {
+  const valueColor = accent === "good" ? "text-settled" : accent === "bad" ? "text-urgent" : accent === "gold" ? "text-primary" : "";
+  const borderTop = accent === "bad" ? "border-t-2 border-t-urgent" : accent === "gold" ? "border-primary/40" : "";
   return (
     <div className={`rounded-2xl border border-border bg-card p-3 ${borderTop}`}>
       <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -301,17 +395,7 @@ function Kpi({
   );
 }
 
-function BreakdownRow({
-  label,
-  value,
-  bold,
-  className,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  className?: string;
-}) {
+function BreakdownRow({ label, value, bold, className }: { label: string; value: string; bold?: boolean; className?: string }) {
   return (
     <div className={`flex items-center justify-between py-0.5 ${bold ? "font-bold" : ""} ${className ?? ""}`}>
       <span>{label}</span>
@@ -352,11 +436,7 @@ function PrioritySection({ title, items, muted, showDate }: { title: string; ite
           const dateInfo = showDate ? reviewDateInfo(kind, row) : null;
           return (
             <li key={i}>
-              <Link
-                to={href as any}
-                hash={`record-${row.id}`}
-                className="flex items-start gap-3 rounded-xl bg-card/80 p-3 hover:bg-card"
-              >
+              <Link to={href as any} hash={`record-${row.id}`} className="flex items-start gap-3 rounded-xl bg-card/80 p-3 hover:bg-card">
                 <Icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
