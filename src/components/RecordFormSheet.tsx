@@ -37,12 +37,20 @@ export function RecordFormSheet({
     setValues((s) => ({ ...s, [k]: v }));
   }
 
+  // Determine if a field should be shown based on showWhen
+  function isFieldVisible(f: FieldDef): boolean {
+    if (!f.showWhen) return true;
+    const watchValue = values[f.showWhen.field];
+    return f.showWhen.values.includes(watchValue);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     try {
       const payload: Record<string, any> = {};
       for (const f of cfg.fields) {
+        if (!isFieldVisible(f)) continue; // skip hidden conditional fields
         let v = values[f.key];
         if (f.type === "chips") {
           payload[f.key] = Array.isArray(v) ? v : [];
@@ -68,6 +76,7 @@ export function RecordFormSheet({
       }
 
       for (const f of cfg.fields) {
+        if (!isFieldVisible(f)) continue;
         if (f.required && (payload[f.key] === undefined || payload[f.key] === "" || payload[f.key] === null)) {
           toast.error(`${f.label} is required`);
           setSubmitting(false);
@@ -108,9 +117,10 @@ export function RecordFormSheet({
     }
   }
 
-  // Group fields by section (or "" for ungrouped)
+  // Group fields by section (or "" for ungrouped), excluding hidden conditional fields
   const sections: { title: string; fields: FieldDef[] }[] = [];
   for (const f of cfg.fields) {
+    if (!isFieldVisible(f)) continue;
     const title = f.section ?? "";
     let s = sections.find((x) => x.title === title);
     if (!s) { s = { title, fields: [] }; sections.push(s); }
@@ -243,7 +253,27 @@ function FieldInput({ f, value, onChange, members, currency }: {
     return <Input inputMode="decimal" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder} />;
   }
   if (f.type === "date") {
-    return <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />;
+    return (
+      <div className="flex gap-2">
+        <Input
+          type="date"
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value || null)}
+          className="flex-1"
+        />
+        {value && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onChange(null)}
+            className="shrink-0 text-xs"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+    );
   }
   return <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder} />;
 }
