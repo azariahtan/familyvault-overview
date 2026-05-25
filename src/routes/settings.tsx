@@ -1,244 +1,212 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useMembers } from "@/hooks/useMembers";
+import { Pencil, Check, X } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
   head: () => ({ meta: [{ title: "Settings — FamilyVault" }] }),
 });
 
-const ACCENT_PRESETS = [
-  { name: "Gold",  value: "oklch(0.72 0.13 80)" },
-  { name: "Teal",  value: "oklch(0.62 0.10 195)" },
-  { name: "Coral", value: "oklch(0.68 0.18 35)" },
-  { name: "Sage",  value: "oklch(0.65 0.10 150)" },
-  { name: "Plum",  value: "oklch(0.55 0.15 320)" },
-  { name: "Slate", value: "oklch(0.45 0.04 250)" },
-];
-
-type LSAlerts = {
-  mortgage_days: number;
-  insurance_days: number;
-  fd_days: number;
-  warranty_days: number;
-};
-const DEFAULTS: LSAlerts = { mortgage_days: 90, insurance_days: 60, fd_days: 30, warranty_days: 90 };
-
-function loadAlerts(): LSAlerts {
-  if (typeof window === "undefined") return DEFAULTS;
-  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("fv:alerts") ?? "{}") }; }
-  catch { return DEFAULTS; }
-}
-
 function SettingsPage() {
   const qc = useQueryClient();
   const { data: members = [] } = useMembers();
+
+  // ── App Settings ─────────────────────────────────────────────
   const { data: settings } = useQuery({
     queryKey: ["app_settings"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
+      const { data, error } = await supabase.from("app_settings").select("*").limit(1).maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
+
   const [familyName, setFamilyName] = useState("");
-  const [simDate, setSimDate] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    typeof window !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
-  );
-  const [accent, setAccent] = useState<string>(() =>
-    (typeof window !== "undefined" && localStorage.getItem("fv:accent")) || ACCENT_PRESETS[0].value
-  );
-  const [alerts, setAlerts] = useState<LSAlerts>(loadAlerts);
+  const [testDate, setTestDate] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.style.setProperty("--aza", accent);
-    localStorage.setItem("fv:accent", accent);
-  }, [accent]);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("fv:alerts", JSON.stringify(alerts));
-  }, [alerts]);
-
-  const save = useMutation({
-    mutationFn: async (patch: any) => {
-      const { error } = await supabase.from("app_settings").update(patch).eq("id", 1);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["app_settings"] });
-      toast.success("Saved");
-    },
-  });
-
-  async function clearDemo() {
-    if (!confirm("Are you sure? This cannot be undone.")) return;
-    const tables = ["properties", "loans", "insurance_policies", "investments", "savings_accounts", "health_conditions"];
-    for (const t of tables) {
-      await supabase.from(t as any).delete().eq("is_demo", true);
+    if (settings) {
+      setFamilyName(settings.family_name ?? "");
+      setTestDate(settings.test_mode_date ?? settings.simulated_date ?? "");
     }
-    qc.invalidateQueries();
-    toast.success("Demo data cleared");
+  }, [settings]);
+
+  async function saveSettings() {
+    if (!familyName.trim()) { toast.error("Family name cannot be empty"); return; }
+    setSavingSettings(true);
+    try {
+      if (settings?.id) {
+        // Update existing row
+        const { error } = await supabase
+          .from("app_settings")
+          .update({ family_name: familyName.trim(), test_mode_date: testDate || null, updated_at: new Date().toISOString() })
+          .eq("id", settings.id);
+        if (error) throw error;
+      } else {
+        // Insert first row
+        const { error } = await supabase
+          .from("app_settings")
+          .insert({ family_name: familyName.trim(), test_mode_date: testDate || null });
+        if (error) throw error;
+      }
+      toast.success("Settings saved");
+      qc.invalidateQueries({ queryKey: ["app_settings"] });
+    } catch (err: any) {
+      toast.error(err.message || "Could not save settings");
+    } finally {
+      setSavingSettings(false);
+    }
   }
 
-  async function exportCsv() {
-    const tables = ["properties", "loans", "insurance_policies", "investments", "savings_accounts"];
-    let out = "";
-    for (const t of tables) {
-      const { data } = await supabase.from(t as any).select("*");
-      if (!data || data.length === 0) continue;
-      const cols = Object.keys(data[0]);
-      out += `# ${t}\n${cols.join(",")}\n`;
-      for (const row of data) {
-        out += cols.map((c) => JSON.stringify((row as any)[c] ?? "")).join(",") + "\n";
-      }
-      out += "\n";
-    }
-    const blob = new Blob([out], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `familyvault-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // ── Member editing ────────────────────────────────────────────
+  const [editingMember, setEditingMember] = useState<string | null>(null);
+  const [memberDraft, setMemberDraft] = useState<{ name: string; emoji: string; color: string }>({ name: "", emoji: "", color: "" });
+
+  function startEdit(m: any) {
+    setEditingMember(m.id);
+    setMemberDraft({ name: m.name, emoji: m.emoji ?? "", color: m.color ?? "#888888" });
+  }
+
+  async function saveMember(id: string) {
+    if (!memberDraft.name.trim()) { toast.error("Name required"); return; }
+    const { error } = await supabase.from("members").update({
+      name: memberDraft.name.trim(),
+      emoji: memberDraft.emoji,
+      color: memberDraft.color,
+    }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Member updated");
+    qc.invalidateQueries({ queryKey: ["members"] });
+    setEditingMember(null);
   }
 
   return (
-    <div className="space-y-5 pb-6">
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
 
-      {/* Family */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold">Family</h2>
-        <label className="block text-xs font-medium text-muted-foreground">Family name</label>
-        <input
-          className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-          defaultValue={settings?.family_name ?? ""}
-          onChange={(e) => setFamilyName(e.target.value)}
-        />
-        <button
-          className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-          onClick={() => save.mutate({ family_name: familyName || settings?.family_name })}
-        >
-          Save
-        </button>
-        <div className="mt-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members</div>
-          <ul className="space-y-1.5">
-            {members.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 rounded-lg bg-background/50 px-3 py-2 text-sm">
-                <span className="h-3 w-3 rounded-full" style={{ background: m.color }} />
-                <span className="flex-1 font-medium">{m.name}</span>
-                <span className="text-xs text-muted-foreground">{m.short_name}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* Appearance */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold">Appearance</h2>
-        <div className="flex items-center justify-between text-sm">
-          <span>Dark mode</span>
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className={`relative h-6 w-11 rounded-full transition ${theme === "dark" ? "bg-primary" : "bg-muted"}`}
-            aria-pressed={theme === "dark"}
-          >
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${theme === "dark" ? "left-5" : "left-0.5"}`} />
-          </button>
-        </div>
-        <div className="mt-4">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">Accent colour</div>
-          <div className="flex flex-wrap gap-2">
-            {ACCENT_PRESETS.map((c) => (
-              <button
-                key={c.name}
-                onClick={() => setAccent(c.value)}
-                title={c.name}
-                className={`h-8 w-8 rounded-full border-2 transition ${accent === c.value ? "border-foreground" : "border-transparent"}`}
-                style={{ background: c.value }}
-                aria-label={c.name}
-              />
-            ))}
+      {/* Family Name */}
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Family Name</h2>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Family name (shown in header)</Label>
+            <Input
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+              placeholder="e.g. The Tan Family"
+            />
           </div>
+          <Button onClick={saveSettings} disabled={savingSettings} className="w-full">
+            {savingSettings ? "Saving…" : "Save Settings"}
+          </Button>
         </div>
-      </section>
-
-      {/* Alerts & Reminders */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold">Alerts & Reminders</h2>
-        {[
-          { key: "mortgage_days",  label: "Mortgage repricing alert" },
-          { key: "insurance_days", label: "Insurance renewal alert" },
-          { key: "fd_days",        label: "Fixed Deposit maturity alert" },
-          { key: "warranty_days",  label: "Warranty expiry alert" },
-        ].map((r) => (
-          <div key={r.key} className="flex items-center justify-between py-1.5 text-sm">
-            <span>{r.label}</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={(alerts as any)[r.key]}
-                onChange={(e) => setAlerts({ ...alerts, [r.key]: Number(e.target.value) })}
-                className="h-7 w-16 rounded-md border border-input bg-background px-2 text-right text-sm"
-              />
-              <span className="text-xs text-muted-foreground">days before</span>
-            </div>
-          </div>
-        ))}
       </section>
 
       {/* Test Mode */}
-      <section className="rounded-2xl border border-review/40 bg-review-soft/30 p-4">
-        <h2 className="mb-1 text-sm font-bold">Test Mode</h2>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Simulate a future date (for testing alerts). The whole app behaves as if today were the date you pick.
-        </p>
-        <input
-          type="date"
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-          defaultValue={settings?.simulated_date ?? ""}
-          onChange={(e) => setSimDate(e.target.value)}
-        />
-        <div className="mt-3 flex gap-2">
-          <button className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-            onClick={() => save.mutate({ simulated_date: simDate || null })}>Apply</button>
-          <button className="rounded-lg border border-border px-3 py-2 text-xs font-semibold"
-            onClick={() => save.mutate({ simulated_date: null })}>Clear</button>
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h2 className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Test Mode</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Simulate a future date to test alerts and reminders. Leave blank to use today.</p>
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            value={testDate}
+            onChange={(e) => setTestDate(e.target.value)}
+            className="flex-1"
+          />
+          {testDate && (
+            <Button variant="outline" size="sm" onClick={() => setTestDate("")}>Clear</Button>
+          )}
         </div>
+        {testDate && (
+          <p className="mt-2 rounded-lg bg-review-tint px-3 py-2 text-xs font-medium text-review-foreground">
+            🟡 Test mode active — simulating {testDate}
+          </p>
+        )}
+        <Button onClick={saveSettings} disabled={savingSettings} className="mt-3 w-full" variant="outline">
+          {savingSettings ? "Saving…" : "Save Test Date"}
+        </Button>
       </section>
 
-      {/* Data */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold">Data</h2>
-        <div className="flex flex-col gap-2">
-          <button onClick={exportCsv} className="rounded-lg border border-border px-3 py-2 text-sm font-semibold">
-            Export all data as CSV
-          </button>
-          <button onClick={clearDemo} className="rounded-lg border border-urgent/40 px-3 py-2 text-sm font-semibold text-urgent">
-            Clear all demo data
-          </button>
-        </div>
+      {/* Members */}
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Family Members</h2>
+        {members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No members found. Make sure you ran the database schema SQL.</p>
+        ) : (
+          <div className="space-y-3">
+            {members.map((m) => (
+              <div key={m.id} className="rounded-xl border border-border bg-background p-3">
+                {editingMember === m.id ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={memberDraft.emoji}
+                        onChange={(e) => setMemberDraft((d) => ({ ...d, emoji: e.target.value }))}
+                        placeholder="Emoji"
+                        className="w-16 text-center text-lg"
+                        maxLength={2}
+                      />
+                      <Input
+                        value={memberDraft.name}
+                        onChange={(e) => setMemberDraft((d) => ({ ...d, name: e.target.value }))}
+                        placeholder="Name"
+                        className="flex-1"
+                      />
+                      <input
+                        type="color"
+                        value={memberDraft.color}
+                        onChange={(e) => setMemberDraft((d) => ({ ...d, color: e.target.value }))}
+                        className="h-9 w-12 cursor-pointer rounded-md border border-input bg-background p-1"
+                        title="Pick member colour"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1 gap-1" onClick={() => saveMember(m.id)}>
+                        <Check className="h-3.5 w-3.5" /> Save
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setEditingMember(null)}>
+                        <X className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg"
+                        style={{ background: m.color + "33" }}
+                      >
+                        {m.emoji}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: m.color }}>{m.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{m.color}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => startEdit(m)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* About */}
-      <section className="rounded-2xl border border-border bg-card p-4 text-sm">
-        <h2 className="mb-2 text-sm font-bold">About</h2>
-        <p className="font-semibold">FamilyVault</p>
-        <p className="text-muted-foreground">Your one stop for everything family — all in one place.</p>
-        <p className="mt-2 text-xs text-muted-foreground">Version 1.0.0</p>
-        <p className="mt-2 text-xs italic text-muted-foreground">
-          Built for families who want one place to track everything that matters.
-        </p>
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">About</h2>
+        <p className="text-xs text-muted-foreground">FamilyVault — private family finance tracker.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Data stored in your own Supabase project. No ads. No data sharing.</p>
       </section>
     </div>
   );
