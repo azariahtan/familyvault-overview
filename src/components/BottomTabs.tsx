@@ -1,106 +1,92 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import {
-  Home, Building2, Shield, Landmark, MoreHorizontal,
-  TrendingUp, PiggyBank, Heart, Package, Settings as SettingsIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Home, Building2, Shield, Landmark, MoreHorizontal, TrendingUp, PiggyBank, Heart, Package, Settings, Gem } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
-type Tab = { to: string; label: string; icon: LucideIcon };
-
-const MOBILE_PRIMARY: Tab[] = [
-  { to: "/",          label: "Home",      icon: Home },
-  { to: "/property",  label: "Property",  icon: Building2 },
+const PRIMARY_TABS = [
+  { to: "/", label: "Home", icon: Home },
+  { to: "/property", label: "Property", icon: Building2 },
   { to: "/insurance", label: "Insurance", icon: Shield },
-  { to: "/loans",     label: "Loans",     icon: Landmark },
+  { to: "/loans", label: "Loans", icon: Landmark },
 ];
 
-const MOBILE_MORE: Tab[] = [
+const MORE_ITEMS = [
   { to: "/investments", label: "Investments", icon: TrendingUp },
-  { to: "/savings",     label: "Savings",     icon: PiggyBank },
-  { to: "/health",      label: "Health",      icon: Heart },
-  { to: "/inventory",   label: "Inventory",   icon: Package },
-  { to: "/settings",    label: "Settings",    icon: SettingsIcon },
+  { to: "/savings", label: "Savings", icon: PiggyBank },
+  { to: "/health", label: "Health", icon: Heart },
+  { to: "/other-assets", label: "Other Assets", icon: Gem },
+  { to: "/inventory", label: "Inventory", icon: Package },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
-
-const ALL_TABS: Tab[] = [...MOBILE_PRIMARY, ...MOBILE_MORE];
 
 export function BottomTabs() {
-  const isMobile = useIsMobile();
+  const state = useRouterState();
+  const pathname = state.location.pathname;
   const [moreOpen, setMoreOpen] = useState(false);
 
-  if (isMobile) {
-    return (
-      <>
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
-          <ul className="grid grid-cols-5">
-            {MOBILE_PRIMARY.map((t) => <TabItem key={t.to} t={t} />)}
-            <li>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(true)}
-                className="flex w-full flex-col items-center gap-0.5 py-2.5 text-[10px] text-muted-foreground"
-                aria-label="More"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-                <span className="font-medium">More</span>
-              </button>
-            </li>
-          </ul>
-        </nav>
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-          <SheetContent side="bottom" className="rounded-t-2xl pb-6">
-            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
-            <SheetHeader>
-              <SheetTitle className="text-base">More</SheetTitle>
-            </SheetHeader>
-            <ul className="mt-3 divide-y divide-border">
-              {MOBILE_MORE.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <li key={t.to}>
-                    <Link
-                      to={t.to}
-                      onClick={() => setMoreOpen(false)}
-                      className="flex items-center gap-3 px-1 py-3.5 text-sm font-medium transition hover:bg-accent/40 rounded-md"
-                    >
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <span>{t.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </SheetContent>
-        </Sheet>
-      </>
-    );
-  }
+  const isMoreActive = MORE_ITEMS.some((i) => i.to !== "/" && pathname.startsWith(i.to));
 
-  // Tablet / desktop: full bar
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur">
-      <ul className="mx-auto grid max-w-3xl grid-cols-9">
-        {ALL_TABS.map((t) => <TabItem key={t.to} t={t} />)}
-      </ul>
-    </nav>
-  );
-}
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-border bg-background/95 backdrop-blur safe-area-pb">
+        {PRIMARY_TABS.map(({ to, label, icon: Icon }) => {
+          const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={cn(
+                "flex flex-1 cursor-pointer flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition",
+                active ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Icon className={cn("h-5 w-5 transition", active && "scale-110")} />
+              {label}
+            </Link>
+          );
+        })}
 
-function TabItem({ t }: { t: Tab }) {
-  const Icon = t.icon;
-  return (
-    <li>
-      <Link
-        to={t.to}
-        activeOptions={{ exact: t.to === "/" }}
-        className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] text-muted-foreground transition-colors data-[status=active]:text-primary"
-      >
-        <Icon className="h-5 w-5" />
-        <span className="font-medium">{t.label}</span>
-      </Link>
-    </li>
+        {/* More button */}
+        <button
+          onClick={() => setMoreOpen(true)}
+          className={cn(
+            "flex flex-1 cursor-pointer flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition",
+            isMoreActive ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <MoreHorizontal className={cn("h-5 w-5 transition", isMoreActive && "scale-110")} />
+          More
+        </button>
+      </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/30" />
+          <SheetHeader>
+            <SheetTitle className="text-sm">More</SheetTitle>
+          </SheetHeader>
+          <div className="mt-3 grid grid-cols-3 gap-3 pb-6">
+            {MORE_ITEMS.map(({ to, label, icon: Icon }) => {
+              const active = pathname.startsWith(to);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setMoreOpen(false)}
+                  className={cn(
+                    "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 transition",
+                    active ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                  )}
+                >
+                  <Icon className={cn("h-6 w-6", active ? "text-primary" : "text-muted-foreground")} />
+                  <span className={cn("text-xs font-medium", active ? "text-primary" : "text-muted-foreground")}>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
