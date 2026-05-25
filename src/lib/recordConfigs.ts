@@ -17,6 +17,8 @@ export type FieldDef = {
   currencyFrom?: string;
   hideOnAdd?: boolean;
   section?: string;
+  /** Only show this field when another field matches a value */
+  showWhen?: { field: string; values: string[] };
 };
 
 export type RecordConfig = {
@@ -27,6 +29,14 @@ export type RecordConfig = {
 };
 
 const RATE_TYPES = ["Fixed", "Floating", "SORA-pegged"];
+
+export const OTHER_ASSET_CATEGORIES = [
+  "Gold / Silver",
+  "Car",
+  "Jewellery",
+  "Art / Collectibles",
+  "Other",
+];
 
 export const recordConfigs: Record<string, RecordConfig> = {
   properties: {
@@ -67,6 +77,7 @@ export const recordConfigs: Record<string, RecordConfig> = {
       // 🎯 Strategy & Action
       { key: "strategy", label: "Investment strategy", type: "text", placeholder: "e.g. Capital appreciation at 5% p.a., sell by 2028", section: "🎯 Strategy & Action" },
       { key: "action_note", label: "Action", type: "text", placeholder: "e.g. Ask UOB for repricing rate May 2026", section: "🎯 Strategy & Action" },
+      { key: "action_member_id", label: "Action assigned to", type: "member", section: "🎯 Strategy & Action" },
     ],
   },
 
@@ -79,13 +90,14 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "purpose", label: "Purpose", type: "text", placeholder: "e.g. Personal, Car" },
       { key: "member_id", label: "Owner", type: "member" },
       { key: "original_amount", label: "Original loan amount", type: "number", money: true },
-      { key: "balance", label: "Current balance", type: "number", money: true },
+      { key: "balance", label: "Current balance (actual)", type: "number", money: true },
       { key: "start_date", label: "Loan start date", type: "date" },
       { key: "term_years", label: "Loan term (years)", type: "number" },
       { key: "rate", label: "Current interest rate %", type: "number" },
       { key: "rate_label", label: "Rate label", type: "text", placeholder: "e.g. SORA + 0.8%" },
       { key: "reprice_date", label: "Reprice date", type: "date" },
       { key: "action", label: "Action", type: "text", placeholder: "e.g. Ask UOB for repricing rate by May 2026" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 
@@ -101,11 +113,14 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "policy_number", label: "Policy number", type: "text" },
       { key: "premium", label: "Premium", type: "number", money: true },
       { key: "frequency", label: "Frequency", type: "select", options: INSURANCE_FREQ, default: "annual" },
+      { key: "num_payments", label: "Number of payments", type: "number", placeholder: "e.g. 3", showWhen: { field: "category", values: ["Life", "Endowment"] } },
+      { key: "payment_end_date", label: "Payment end date", type: "date", showWhen: { field: "category", values: ["Life", "Endowment"] } },
       { key: "sum_assured", label: "Sum assured", type: "number", money: true },
       { key: "start_date", label: "Policy start date", type: "date" },
       { key: "end_date", label: "Policy end date", type: "date" },
       { key: "next_due_date", label: "Next premium due", type: "date" },
       { key: "action", label: "Action", type: "text", placeholder: "e.g. Renew before Mar 2027" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 
@@ -118,9 +133,11 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "group_name", label: "Investment type", type: "select", options: INVESTMENT_TYPES, required: true },
       { key: "member_id", label: "Owner", type: "member" },
       { key: "cost_basis", label: "Amount invested", type: "number", money: true },
-      { key: "current_value", label: "Current value", type: "number", money: true },
+      { key: "current_value", label: "Current value (est.)", type: "number", money: true },
       { key: "projected_return_pct", label: "Projected return %", type: "number" },
       { key: "strategy", label: "Strategy / notes", type: "textarea" },
+      { key: "action", label: "Action", type: "text", placeholder: "e.g. Sell when gold hits $4,000/oz" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 
@@ -138,6 +155,8 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "maturity_date", label: "Maturity date (for FDs)", type: "date" },
       { key: "last_updated", label: "Balance as of", type: "date" },
       { key: "note", label: "Notes", type: "textarea" },
+      { key: "action", label: "Action", type: "text", placeholder: "e.g. Renew FD at maturity" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 
@@ -151,6 +170,7 @@ export const recordConfigs: Record<string, RecordConfig> = {
       { key: "supplements", label: "Take (supplements)", type: "chips", placeholder: "Type and press Enter…", default: [] },
       { key: "actions", label: "Do (actions)", type: "chips", placeholder: "Type and press Enter…", default: [] },
       { key: "details", label: "Details", type: "textarea" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 
@@ -160,6 +180,22 @@ export const recordConfigs: Record<string, RecordConfig> = {
     label: "Go-Bag Item",
     fields: [
       { key: "label", label: "Item", type: "text", required: true, placeholder: "e.g. Passports" },
+    ],
+  },
+
+  other_assets: {
+    table: "other_assets",
+    queryKey: "other_assets",
+    label: "Other Asset",
+    fields: [
+      { key: "name", label: "Asset name", type: "text", required: true, placeholder: "e.g. Gold bars (20 × 1oz)" },
+      { key: "category", label: "Category", type: "select", options: OTHER_ASSET_CATEGORIES, required: true, default: "Other" },
+      { key: "member_id", label: "Owner", type: "member" },
+      { key: "estimated_value", label: "Estimated value", type: "number", money: true },
+      { key: "last_updated", label: "Value as of", type: "date" },
+      { key: "notes", label: "Notes", type: "textarea" },
+      { key: "action", label: "Action", type: "text", placeholder: "e.g. Sell when gold hits $4,000/oz" },
+      { key: "action_member_id", label: "Action assigned to", type: "member" },
     ],
   },
 };
