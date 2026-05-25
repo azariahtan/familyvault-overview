@@ -1,10 +1,12 @@
 import { Outlet, ScrollRestoration, createRootRouteWithContext, Link, useRouterState } from "@tanstack/react-router";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomTabs } from "@/components/BottomTabs";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
 import { Home, Building2, Shield, Landmark, TrendingUp, PiggyBank, Heart, Package, Settings, Gem } from "lucide-react";
+
+const queryClient = new QueryClient();
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: RootLayout,
@@ -65,36 +67,38 @@ function DesktopSidebar() {
 
 function RootLayout() {
   return (
-    <div className="flex h-dvh flex-col bg-background md:flex-row">
-      {/* Desktop sidebar — hidden on mobile */}
-      <DesktopSidebar />
+    <QueryClientProvider client={queryClient}>
+      <div className="flex h-dvh flex-col bg-background md:flex-row">
+        {/* Desktop sidebar — hidden on mobile */}
+        <DesktopSidebar />
 
-      {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header — mobile only (desktop has sidebar title) */}
-        <div className="md:hidden">
-          <AppHeader />
-        </div>
-        {/* Desktop header strip */}
-        <div className="hidden h-14 items-center border-b border-border bg-background px-6 md:flex">
-          <AppHeader desktopMode />
-        </div>
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-6">
-          <div className="mx-auto max-w-2xl">
-            <Outlet />
+        {/* Main content area */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header — mobile only (desktop has sidebar title) */}
+          <div className="md:hidden">
+            <AppHeader />
           </div>
-        </main>
-      </div>
+          {/* Desktop header strip */}
+          <div className="hidden h-14 items-center border-b border-border bg-background px-6 md:flex">
+            <AppHeader desktopMode />
+          </div>
 
-      {/* Bottom tabs — mobile only */}
-      <div className="md:hidden">
-        <BottomTabs />
-      </div>
+          {/* Page content */}
+          <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-6">
+            <div className="mx-auto max-w-2xl">
+              <Outlet />
+            </div>
+          </main>
+        </div>
 
-      <ScrollRestoration />
-      <Toaster richColors position="top-center" />
-    </div>
+        {/* Bottom tabs — mobile only */}
+        <div className="md:hidden">
+          <BottomTabs />
+        </div>
+
+        <ScrollRestoration />
+        <Toaster richColors position="top-center" />
+      </div>
+    </QueryClientProvider>
   );
 }
