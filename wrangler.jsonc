@@ -1,6 +1,4 @@
 {
   "name": "familyvault-overview",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "./dist/server/index.js",
-  "usage_model": "bundled"
+  "compatibility_flags": ["nodejs_compat"]
 }
