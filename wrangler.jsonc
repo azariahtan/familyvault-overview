@@ -2,8 +2,5 @@
   "name": "familyvault-overview",
   "compatibility_date": "2026-05-25",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
-  "observability": {
-    "enabled": true
-  }
+  "main": "./src/server.ts"
 }
