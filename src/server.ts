@@ -1,3 +1,4 @@
+console.log("✅ server.ts loaded successfully");
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
@@ -11,9 +12,16 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry)),
-    );
+    console.log("🔄 Loading @tanstack/react-start/server-entry...");
+    serverEntryPromise = import("@tanstack/react-start/server-entry")
+      .then((m) => {
+        console.log("✅ Successfully loaded server entry");
+        return ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry));
+      })
+      .catch((err) => {
+        console.error("❌ FAILED to load server entry:", err);
+        throw err;
+      });
   }
   return serverEntryPromise;
 }
