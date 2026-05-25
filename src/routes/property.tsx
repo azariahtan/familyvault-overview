@@ -112,7 +112,9 @@ function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => 
   const grossYield = p.current_value && p.monthly_rent ? ((p.monthly_rent * 12) / p.current_value) * 100 : null;
   const netRent = (Number(p.monthly_rent) || 0) - costs;
   const netYield = p.current_value ? (netRent * 12) / p.current_value * 100 : null;
-  const cashFlow = netRent - (Number(p.monthly_payment) || 0);
+  // Total monthly outflow = costs + mortgage
+  const totalOutflow = costs + (Number(p.monthly_payment) || 0);
+  const cashFlow = (Number(p.monthly_rent) || 0) - totalOutflow;
 
   return (
     <HashHighlight id={`record-${p.id}`}>
@@ -126,15 +128,25 @@ function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => 
         onEdit={edit.open}
         onDelete={onDelete}
         rightMeta={
-          <div className="text-right text-xs">
+          <div className="text-right text-xs space-y-0.5">
             <div className="font-bold">{fmtMoney(p.current_value, p.currency)}</div>
-            {p.monthly_rent && <div className="text-muted-foreground">{fmtMoney(p.monthly_rent, p.currency)}/mo</div>}
+            {p.monthly_rent != null && (
+              <div className="font-medium" style={{ color: "hsl(142 71% 35%)" }}>
+                Rental: {fmtMoney(p.monthly_rent, p.currency)}/mo
+              </div>
+            )}
+            {totalOutflow > 0 && (
+              <div className="font-medium text-urgent">
+                Out: {fmtMoney(totalOutflow, p.currency)}/mo
+              </div>
+            )}
           </div>
         }
       >
         <Section title="Strategy">
           <p className="text-sm text-foreground/80">{p.strategy || "—"}</p>
         </Section>
+
         <Section title="Financials">
           <FieldRow label="Purchase price" value={fmtMoney(p.purchase_price, p.currency)} />
           <FieldRow label="Purchase date" value={fmtDate(p.purchase_date)} />
@@ -157,20 +169,29 @@ function PropertyRow({ p, onStatus, onDelete }: { p: any; onStatus: (s: any) => 
           <FieldRow label="Property tax" value={fmtMoney(p.cost_property_tax, p.currency)} />
           <FieldRow label="Fire insurance" value={fmtMoney(p.cost_fire_insurance, p.currency)} />
           <FieldRow label="Maintenance / repairs" value={fmtMoney(p.cost_maintenance, p.currency)} />
-          <FieldRow label={p.cost_other_label || "Other"} value={fmtMoney(p.cost_other, p.currency)} />
-          <FieldRow label={<span className="font-bold">Total monthly costs</span> as any} value={<span className="font-bold">{fmtMoney(costs, p.currency)}</span>} />
+          {p.cost_other != null && (
+            <FieldRow label={p.cost_other_label || "Other"} value={fmtMoney(p.cost_other, p.currency)} />
+          )}
+          <FieldRow
+            label={<span className="font-bold">Total monthly outflow</span> as any}
+            value={<span className="font-bold text-urgent">{fmtMoney(totalOutflow, p.currency)}</span>}
+          />
+          <FieldRow
+            label={<span className="font-bold">Net monthly cash flow</span> as any}
+            value={
+              <span className={`font-bold ${cashFlow >= 0 ? "text-settled" : "text-urgent"}`}>
+                {fmtMoney(cashFlow, p.currency)}
+              </span>
+            }
+          />
           <FieldRow label="Gross yield %" value={grossYield != null ? fmtPct(grossYield) : "—"} />
           <FieldRow label="Net yield %" value={netYield != null ? fmtPct(netYield) : "—"} />
-          <FieldRow label="Monthly cash flow" value={<span className={cashFlow >= 0 ? "text-settled" : "text-urgent"}>{fmtMoney(cashFlow, p.currency)}</span>} />
-          <FieldRow
-            label="Loan vs Value %"
-            value={p.current_value && p.mortgage_balance ? fmtPct((p.mortgage_balance / p.current_value) * 100) : "—"}
-          />
         </Section>
 
-        <CollapsibleSection icon={<span>📝</span>} title="Notes">
+        <CollapsibleSection icon={<span>📝</span>} title="Notes & History">
           <NotesLog entityType="property" entityId={p.id} />
         </CollapsibleSection>
+
         <CollapsibleSection icon={<span>📎</span>} title="Documents">
           <DocumentsList entityType="property" entityId={p.id} />
         </CollapsibleSection>
