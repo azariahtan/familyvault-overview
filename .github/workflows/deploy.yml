@@ -23,21 +23,7 @@ jobs:
       - run: |
           CSS=$(ls dist/client/assets/*.css | head -1 | xargs basename)
           JS=$(ls dist/client/assets/index-*.js | head -1 | xargs basename)
-          cat > dist/client/index.html << HTMLEOF
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>FamilyVault</title>
-          <link rel="stylesheet" href="/familyvault-overview/assets/$CSS">
-          </head>
-          <body>
-          <div id="app"></div>
-          <script type="module" src="/familyvault-overview/assets/$JS"></script>
-          </body>
-          </html>
-          HTMLEOF
+          printf '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>FamilyVault</title>\n<link rel="stylesheet" href="/familyvault-overview/assets/%s">\n</head>\n<body>\n<script type="module" src="/familyvault-overview/assets/%s"></script>\n</body>\n</html>\n' "$CSS" "$JS" > dist/client/index.html
           cp dist/client/index.html dist/client/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
