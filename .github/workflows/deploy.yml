@@ -26,20 +26,4 @@ jobs:
       - name: Build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-        run: bun run build
-
-      - - name: Prepare for GitHub Pages
-        run: |
-          CSS=$(ls dist/client/assets/*.css | head -1 | xargs basename)
-          echo "CSS file: $CSS"
-          echo "=== First 50 lines of _shell.html ==="
-          head -50 dist/client/_shell.html
-          cp dist/client/_shell.html dist/client/index.html
-          cp dist/client/_shell.html dist/client/404.html
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist/client
-
-      - uses: actions/deploy-pages@v4
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${
