@@ -1,21 +1,22 @@
 import { defineConfig } from 'vite'
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
 export default defineConfig({
   base: '/familyvault-overview/',
   plugins: [
-    tanstackStart({
-      spa: {
-        enabled: true,
-      },
-    }),
+    TanStackRouterVite(),
     react(),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      input: 'src/main.tsx',
     },
   },
 })
