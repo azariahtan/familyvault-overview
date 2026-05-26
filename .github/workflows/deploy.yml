@@ -33,7 +33,7 @@ jobs:
           <link rel="stylesheet" href="/familyvault-overview/assets/$CSS">
           </head>
           <body>
-          $(cat dist/client/_shell.html)
+          <div id="root">$(cat dist/client/_shell.html)</div>
           <script type="module" src="/familyvault-overview/assets/$JS"></script>
           </body>
           </html>
